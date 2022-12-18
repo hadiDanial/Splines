@@ -49,5 +49,10 @@ namespace Hadi.Splines
                 lineRenderer = gameObject.AddComponent<LineRenderer>();
             lineRenderer.startWidth = 0.2f;
         }
+
+        public void SetClosedShape(bool closed)
+        {
+            lineRenderer.loop = closed;
+        }
     }
 }

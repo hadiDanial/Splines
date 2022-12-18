@@ -11,6 +11,7 @@ namespace Hadi.Splines
         public void SetPointCount(int count);
         public void Clear();
         public void Setup();
+        public void SetClosedShape(bool closed);
     }
 
     public enum SplineRendererType

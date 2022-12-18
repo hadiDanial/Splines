@@ -123,7 +123,12 @@ namespace Hadi.Splines
                 CalculateSegmentedPoints(points[i], points[i + 1], i);
             }
             if (closedSpline)
+            {
+                splineRenderer.SetClosedShape(true);
                 CloseSpline();
+            }
+            else
+                splineRenderer.SetClosedShape(false);
 
             splineRenderer.SetPoints(segmentedPoints);
         }
@@ -136,9 +141,9 @@ namespace Hadi.Splines
             if (points.Count < 3)
             {
                 Debug.LogError("Cannot close a spline with less than three points! " + gameObject.name);
+                closedSpline = false;
                 return;
             }
-
             CalculateSegmentedPoints(points[points.Count - 1], points[0], points.Count - 1);
         }
 
