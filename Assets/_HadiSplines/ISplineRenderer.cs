@@ -10,6 +10,7 @@ namespace Hadi.Splines
         public void SetPoints(List<Vector3> points);
         public void SetPointCount(int count);
         public void Clear();
+        public void Setup();
     }
 
     public enum SplineRendererType

@@ -10,8 +10,7 @@ namespace Hadi.Splines
 
         private void Awake()
         {
-            this.lineRenderer = GetComponent<LineRenderer>();
-            this.lineRenderer.startWidth = 0.2f;
+            Setup();
         }
         public void AddPoint(Vector3 point)
         {
@@ -41,6 +40,14 @@ namespace Hadi.Splines
         public void Clear()
         {
             this.lineRenderer.positionCount = 0;
+        }
+
+        public void Setup()
+        {
+            lineRenderer = GetComponent<LineRenderer>();
+            if (lineRenderer == null)
+                lineRenderer = gameObject.AddComponent<LineRenderer>();
+            lineRenderer.startWidth = 0.2f;
         }
     }
 }
