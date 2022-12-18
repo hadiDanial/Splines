@@ -7,30 +7,24 @@ namespace Hadi.Splines
     {
         public Vector3 anchor;
         public Vector3 controlPoint1, controlPoint2;
+        private Vector3 relativeControlPoint1, relativeControlPoint2;
         public ControlMode mode;
-
-
 
         /// <summary>
         /// Constructor that initializes a point with mirrored control points.
         /// </summary>
         /// <param name="anchor">The anchor position of this point.</param>
-        /// <param name="controlPoint1">The position of the first control point, which will be mirrored across the anchor.</param>
-        /// <param name="controlPointPositionIsRelative">If true, the control point positions will be relative to the anchor point, otherwise they will be in world space.</param>
-        public Point(Vector3 anchor, Vector3 controlPoint1, bool controlPointPositionIsRelative = true)
+        /// <param name="controlPoint1">The position of the first control point, relative to the anchor, which will be mirrored across the anchor.</param>
+        public Point(Vector3 anchor, Vector3 controlPoint1)
         {
             this.anchor = anchor;
+            this.controlPoint2 = Vector3.zero;         
+            relativeControlPoint1 = controlPoint1;            
+            this.controlPoint1 = anchor + relativeControlPoint1;
             this.controlPoint2 = Vector3.zero;
-            if (controlPointPositionIsRelative)
-            {
-                this.controlPoint1 = anchor + controlPoint1;
-            }
-            else
-            {
-                this.controlPoint1 = controlPoint1;
-            }
+            this.relativeControlPoint2 = Vector3.zero;
             mode = ControlMode.Mirrored;
-            MirrorPoints();
+            MirrorControlPoints();
 
         }
 
@@ -38,22 +32,15 @@ namespace Hadi.Splines
         /// Constructor that initializes a point with broken control points.
         /// </summary>
         /// <param name="anchor">The anchor position of this point.</param>
-        /// <param name="controlPoint1">The position of the first control point.</param>
-        /// <param name="controlPoint2">The position of the second control point.</param>
-        /// <param name="controlPointPositionIsRelative">If true, the control point positions will be relative to the anchor point, otherwise they will be in world space.</param>
-        public Point(Vector3 anchor, Vector3 controlPoint1, Vector3 controlPoint2, bool controlPointPositionIsRelative = true)
+        /// <param name="controlPoint1">The position of the first control point, relative to the anchor.</param>
+        /// <param name="controlPoint2">The position of the second control point, relative to the anchor.</param>
+        public Point(Vector3 anchor, Vector3 controlPoint1, Vector3 controlPoint2)
         {
             this.anchor = anchor;
-            if (controlPointPositionIsRelative)
-            {
-                this.controlPoint1 = anchor + controlPoint1;
-                this.controlPoint2 = anchor + controlPoint2;
-            }
-            else
-            {
-                this.controlPoint1 = controlPoint1;
-                this.controlPoint2 = controlPoint2;
-            }
+            relativeControlPoint1 = controlPoint1;
+            relativeControlPoint2 = controlPoint2;
+            this.controlPoint1 = anchor + relativeControlPoint1;
+            this.controlPoint2 = anchor + relativeControlPoint2;
             this.mode = ControlMode.Broken;
         }
 
@@ -71,21 +58,40 @@ namespace Hadi.Splines
             Vector3 vec1= controlPoint1Direction * controlPoint1Magnitude;
             Vector3 vec2= controlPoint1Direction * -controlPoint2Magnitude;
 
-                this.controlPoint1 = anchor + vec1;
-                this.controlPoint2 = anchor + vec2;
-            
+            relativeControlPoint1 = vec1;
+            relativeControlPoint2 = vec2;
+            this.controlPoint1 = anchor + relativeControlPoint1;
+            this.controlPoint2 = anchor + relativeControlPoint2;
             this.mode = ControlMode.Aligned;
         }
 
-
-        public void AlignPoints()
+        public void Refresh()
         {
-            controlPoint2 = -controlPoint1.normalized * controlPoint2.magnitude;
+            relativeControlPoint1 = controlPoint1 - anchor;
+            relativeControlPoint2 = controlPoint2 - anchor;
+            switch (mode)
+            {
+                case ControlMode.Aligned:
+                    AlignControlPoints();
+                    break;
+                case ControlMode.Mirrored:
+                    MirrorControlPoints();
+                    break;
+                default:
+                    break;
+            }
         }
 
-        public void MirrorPoints()
+        public void AlignControlPoints()
         {
-            this.controlPoint2 = anchor - controlPoint1;
+            relativeControlPoint2 = -relativeControlPoint1.normalized * relativeControlPoint2.magnitude;
+            controlPoint2 = relativeControlPoint2 + anchor;
+        }
+
+        public void MirrorControlPoints()
+        {
+            relativeControlPoint2 = -relativeControlPoint1;
+            this.controlPoint2 = anchor - relativeControlPoint1;
         }
     }
 }
