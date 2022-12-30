@@ -18,7 +18,7 @@ namespace Hadi.Splines.Editor
             
         Vector3 anchor, control1, control2;
         Quaternion rotation;
-
+        Vector3 normal;
         public override void OnInspectorGUI()
         {
             base.OnInspectorGUI();
@@ -39,7 +39,9 @@ namespace Hadi.Splines.Editor
                 Handles.color = anchorColor;
                 Handles.SphereHandleCap(0, point.anchor, Quaternion.identity, spline.ANCHOR_SIZE, EventType.Repaint);
                 anchor = Handles.PositionHandle(point.anchor, Quaternion.identity);
-                rotation = Handles.RotationHandle(point.anchorRotation, point.anchor);
+                //rotation = Handles.RotationHandle(Quaternion.Euler(point.normal), point.anchor);
+                //normal = rotation.eulerAngles;
+                //Debug.Log($"Normal={normal}, Rotation={rotation}");
                 Handles.color = controlPointColor;
                 Handles.SphereHandleCap(0, point.controlPoint1, Quaternion.identity, spline.CONTROL_SIZE, EventType.Repaint);
                 control1 = Handles.PositionHandle(point.controlPoint1, Quaternion.identity);
@@ -52,7 +54,23 @@ namespace Hadi.Splines.Editor
                 Handles.color = lineColor;
                 Handles.DrawLine(point.anchor, point.controlPoint1, lineThickness);
                 Handles.DrawLine(point.anchor, point.controlPoint2, lineThickness);
-                point.Update(anchor, control1, control2, rotation);
+                point.Update(anchor, control1, control2, normal);
+            }
+            SplineData data = spline.SplineData;
+            if(spline.DrawGizmos)
+            {
+                Handles.color = Color.white;
+                for (int i = 0; i < data.Normals.Count; i++)
+                {
+                    Vector3 p = data.SegmentedPoints[i];
+                    Handles.DrawLine(p, p + data.Normals[i] * 0.15f);
+                }
+                Handles.color = Color.green;
+                for (int i = 0; i < data.Tangents.Count; i++)
+                {
+                    Vector3 p = data.SegmentedPoints[i];
+                    Handles.DrawLine(p, p + data.Tangents[i] * 0.15f);
+                }
             }
             if (EditorGUI.EndChangeCheck())
             {
