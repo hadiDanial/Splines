@@ -14,9 +14,12 @@ namespace Hadi.Splines
         [SerializeField]
         protected List<Point> points;
         [SerializeField]
-        protected List<Vector3> segmentedPoints, normals, tangents;
-        [SerializeField]
         private SplineRendererType rendererType = SplineRendererType.LineRenderer;
+        [SerializeField]
+        private SplineData splineData;
+
+        private ISplineRenderer splineRenderer;
+
         [Header("DEBUG")]
         [SerializeField]
         private bool drawGizmos = true;
@@ -27,9 +30,6 @@ namespace Hadi.Splines
         [Range(0.01F, 0.5F), SerializeField]
         private float anchorSize = 0.15f;
 
-
-        private ISplineRenderer splineRenderer;
-
         /// <summary>
         /// Number of points per curve (two anchors, and a control point for each anchor).
         /// </summary>
@@ -37,14 +37,16 @@ namespace Hadi.Splines
 
         public float ANCHOR_SIZE { get => anchorSize; }
         public float CONTROL_SIZE { get => controlSize; }
+        public SplineData SplineData { get => splineData; private set => splineData = value; }
+        public bool DrawGizmos { get => drawGizmos; }
+        public bool DrawNormals { get => drawNormals; }
+        public bool DrawTangents { get => drawTangents; }
 
         private void Awake()
         {
             SetRendererType();
             points = new List<Point>();
-            segmentedPoints = new List<Vector3>();
-            normals = new List<Vector3>();
-            tangents = new List<Vector3>();
+            SplineData = new SplineData();
         }
 
         private void Start()
@@ -61,18 +63,14 @@ namespace Hadi.Splines
         {
             Point p1 = new Point(new Vector3(-2, -1), Vector3.left * 5, Vector3.right + Vector3.one * 0.25f);
             Point p2 = new Point(Vector3.one, Vector3.left, Vector3.right);
-            Point p3 = new Point(Vector3.zero, new Vector3(-0.5f, -1));
+            Point p3 = new Point(Vector3.zero, new Vector3(-0.5f, 0));
             Point p4 = new Point(Vector3.one, new Vector2(-0.3f, 0.75f), 1f, 0.75f);
             Point p5 = new Point(new Vector3(3, -4), new Vector2(0, 0.75f), 1f, 0.75f);
             Point p6 = new Point(Vector3.zero, Vector3.left, Vector3.right);
-            Point p7 = new Point(Vector3.right + Vector3.up, Vector3.left * 1.3f, Vector3.zero);
-            //points.Add(p1);
-            //points.Add(p2);
-            //points.Add(p3);
-            //points.Add(p4);
-            points.Add(p6);
+            Point p7 = new Point(Vector3.right, Vector3.left, Vector3.zero);
+
+            points.Add(p3);
             points.Add(p7);
-            points.Add(p5);
         }
 
         [ContextMenu("Setup Renderer")]
@@ -124,10 +122,8 @@ namespace Hadi.Splines
             int numPositions = pointsCount * POINT_COUNT_PER_CURVE * (pointsPerCurve + 1);//points.Count * segmentsPerCurve;
             splineRenderer.SetPointCount(closedSpline ? numPositions + pointsPerCurve : numPositions);
 
-
-            segmentedPoints.Clear();
-            tangents.Clear();
-            normals.Clear();
+            SplineData.Clear();
+            
             for (int i = 0; i < pointsCount - 1; i++)
             {
                 CalculateSegmentedPoints(points[i], points[i + 1], i);
@@ -140,7 +136,8 @@ namespace Hadi.Splines
             else
                 splineRenderer.SetClosedShape(false);
 
-            splineRenderer.SetPoints(segmentedPoints);
+            SplineData.CalculateLength();
+            splineRenderer.SetData(SplineData);
         }
 
         /// <summary>
@@ -176,15 +173,23 @@ namespace Hadi.Splines
             {
                 float t = ((float)i % totalSegments) / (end - start);
                 //print("t=" + t + ", start=" + start + ", end=" + end);
-                float t2 = t * t;
-                float t3 = t2 * t;
-                Vector3 P = factor0 + t * factor1 + t2 * factor2 + t3 * factor3;
-                segmentedPoints.Add(P);
-                P = factor1 + 2 * t * factor2 + 3 * t2 * factor3;
-                tangents.Add(P);
-                P = Vector3.Cross(Quaternion.Lerp(P1.anchorRotation, P2.anchorRotation, t).eulerAngles, P); // Cross the tangent vector with the normal of the two points (lerped)
-                normals.Add(P.normalized);
+                CalculatePoint(P1, P2, factor0, factor1, factor2, factor3, t);
             }
+            // t = 1
+            CalculatePoint(P1, P2, factor0, factor1, factor2, factor3, 1);
+        }
+
+        private void CalculatePoint(Point P1, Point P2, Vector3 factor0, Vector3 factor1, Vector3 factor2, Vector3 factor3, float t)
+        {
+            float t2 = t * t;
+            float t3 = t2 * t;
+            Vector3 P = factor0 + t * factor1 + t2 * factor2 + t3 * factor3;
+            SplineData.SegmentedPoints.Add(P);
+            P = factor1 + 2 * t * factor2 + 3 * t2 * factor3;
+            SplineData.Tangents.Add(P);
+            //P = Vector3.Cross(Quaternion.Lerp(P1.anchorRotation, P2.anchorRotation, t).eulerAngles, P); // Cross the tangent vector with the normal of the two points (lerped)
+            P = Vector3.Lerp(P1.normal, P2.normal, t);
+            SplineData.Normals.Add(P.normalized);
         }
 
         /// <summary>
@@ -215,22 +220,22 @@ namespace Hadi.Splines
             }
         }
 
-        private void OnDrawGizmos()
-        {
-            if (points.Count == 0 || !drawGizmos) return;
-            if (normals.Count == 0 || !drawNormals) return;
-            Gizmos.color = Color.red;
-            for (int i = 0; i < normals.Count; i++)
-            {
-                Gizmos.DrawRay(segmentedPoints[i], normals[i] * 0.15f);
-            }
-            Gizmos.color = Color.green;
-            if (tangents.Count == 0 || !drawTangents) return;
-            for (int i = 0; i < tangents.Count; i++)
-            {
-                Gizmos.DrawRay(segmentedPoints[i], tangents[i] * 0.15f);
-            }
-        }
+        //private void OnDrawGizmos()
+        //{
+        //    if (points.Count == 0 || !drawGizmos) return;
+        //    if (normals.Count == 0 || !drawNormals) return;
+        //    Gizmos.color = Color.red;
+        //    for (int i = 0; i < normals.Count; i++)
+        //    {
+        //        Gizmos.DrawRay(segmentedPoints[i], normals[i] * 0.15f);
+        //    }
+        //    Gizmos.color = Color.green;
+        //    if (tangents.Count == 0 || !drawTangents) return;
+        //    for (int i = 0; i < tangents.Count; i++)
+        //    {
+        //        Gizmos.DrawRay(segmentedPoints[i], tangents[i] * 0.15f);
+        //    }
+        //}
 
         public List<Point> GetPoints()
         {
