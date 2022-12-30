@@ -7,6 +7,7 @@ namespace Hadi.Splines
     internal class SplineLineRenderer : MonoBehaviour, ISplineRenderer
     {
         private LineRenderer lineRenderer;
+        private SplineData splineData;
 
         private void Awake()
         {
@@ -28,12 +29,14 @@ namespace Hadi.Splines
             lineRenderer.SetPosition(index, point);
         }
 
-        public void SetPoints(List<Vector3> points)
+        public void SetData(SplineData splineData)
         {
-            SetPointCount(points.Count);
-            for (int i = 0; i < points.Count; i++)            
+            this.splineData = splineData;
+            int count = splineData.SegmentedPoints.Count;
+            SetPointCount(count);
+            for (int i = 0; i < count; i++)            
             {
-                SetPoint(i, points[i]);
+                SetPoint(i, splineData.SegmentedPoints[i]);
             }
         }
 
@@ -47,7 +50,7 @@ namespace Hadi.Splines
             lineRenderer = GetComponent<LineRenderer>();
             if (lineRenderer == null)
                 lineRenderer = gameObject.AddComponent<LineRenderer>();
-            lineRenderer.startWidth = 0.2f;
+            lineRenderer.startWidth = 0.05f;
         }
 
         public void SetClosedShape(bool closed)
