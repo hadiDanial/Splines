@@ -13,10 +13,13 @@ namespace Hadi.Splines
         {
             Setup();
         }
-        public void AddPoint(Vector3 point)
+
+        public void Setup()
         {
-            lineRenderer.positionCount += 1;
-            lineRenderer.SetPosition(lineRenderer.positionCount - 1, point);
+            lineRenderer = GetComponent<LineRenderer>();
+            if (lineRenderer == null)
+                lineRenderer = gameObject.AddComponent<LineRenderer>();
+            lineRenderer.startWidth = 0.05f;
         }
 
         public void SetPointCount(int count)
@@ -39,23 +42,21 @@ namespace Hadi.Splines
                 SetPoint(i, splineData.SegmentedPoints[i]);
             }
         }
+        public void SetClosedShape(bool closed)
+        {
+            lineRenderer.loop = closed;
+        }
+
+        public void SetFill(bool isFilled = true)
+        {
+            throw new System.NotImplementedException();
+        }
 
         public void Clear()
         {
             this.lineRenderer.positionCount = 0;
         }
 
-        public void Setup()
-        {
-            lineRenderer = GetComponent<LineRenderer>();
-            if (lineRenderer == null)
-                lineRenderer = gameObject.AddComponent<LineRenderer>();
-            lineRenderer.startWidth = 0.05f;
-        }
 
-        public void SetClosedShape(bool closed)
-        {
-            lineRenderer.loop = closed;
-        }
     }
 }
