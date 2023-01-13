@@ -8,6 +8,7 @@ namespace Hadi.Splines
     {
         public Vector3 anchor;
         public Vector3 normal = Vector3.up;
+        public Quaternion rotation = Quaternion.identity;
         public Vector3 controlPoint1, controlPoint2;
         private Vector3 relativeControlPoint1, relativeControlPoint2;
         public ControlMode mode;
@@ -112,7 +113,7 @@ namespace Hadi.Splines
                 refresh = true;            
                 this.controlPoint1 = control1;
                 this.controlPoint2 = control2;
-                //this.normal = normal.normalized;
+                this.normal = normal.normalized;
             }
 
             if (refresh)

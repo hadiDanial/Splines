@@ -63,11 +63,11 @@ namespace Hadi.Splines
         {
             Point p1 = new Point(new Vector3(-2, -1), Vector3.left * 5, Vector3.right + Vector3.one * 0.25f);
             Point p2 = new Point(Vector3.one, Vector3.left, Vector3.right);
-            Point p3 = new Point(Vector3.zero, new Vector3(-0.5f, 0));
+            Point p3 = new Point(Vector3.zero, Vector3.left, Vector3.right);
             Point p4 = new Point(Vector3.one, new Vector2(-0.3f, 0.75f), 1f, 0.75f);
             Point p5 = new Point(new Vector3(3, -4), new Vector2(0, 0.75f), 1f, 0.75f);
             Point p6 = new Point(Vector3.zero, Vector3.left, Vector3.right);
-            Point p7 = new Point(Vector3.right, Vector3.left, Vector3.zero);
+            Point p7 = new Point(Vector3.right*3, Vector3.left, Vector3.right);
 
             points.Add(p3);
             points.Add(p7);
@@ -85,6 +85,7 @@ namespace Hadi.Splines
                     splineRenderer = gameObject.AddComponent<SplineLineRenderer>();
                     break;
                 case SplineRendererType.MeshRenderer:
+                    splineRenderer = gameObject.AddComponent<SplineMeshRenderer>();
                     break;
                 case SplineRendererType.QuadRenderer:
                     break;
@@ -188,7 +189,8 @@ namespace Hadi.Splines
             P = factor1 + 2 * t * factor2 + 3 * t2 * factor3;
             SplineData.Tangents.Add(P);
             //P = Vector3.Cross(Quaternion.Lerp(P1.anchorRotation, P2.anchorRotation, t).eulerAngles, P); // Cross the tangent vector with the normal of the two points (lerped)
-            P = Vector3.Lerp(P1.normal, P2.normal, t);
+            P = Quaternion.Slerp(P1.rotation, P2.rotation, t) * Vector3.up;
+            //P = Vector3.Lerp(P1.normal, P2.normal, t);
             SplineData.Normals.Add(P.normalized);
         }
 
@@ -214,6 +216,8 @@ namespace Hadi.Splines
 
         protected void OnValidate()
         {
+            if (points == null) return;
+            if (points.Count == 0) return;
             foreach (Point point in points)
             {
                 point.Refresh();

@@ -51,10 +51,13 @@ namespace Hadi.Splines.Editor
                     Handles.color = alignedColor;
                 Handles.SphereHandleCap(0, point.controlPoint2, Quaternion.identity, spline.CONTROL_SIZE, EventType.Repaint);
                 control2 = Handles.PositionHandle(point.controlPoint2, Quaternion.identity);
+                rotation = Handles.RotationHandle(point.rotation, point.anchor);
+                //  Handles.Disc(point.rotation, point.anchor, Vector3.Cross(point.controlPoint1, Quaternion.Euler(point.rotation)), 1, true, 0);
                 Handles.color = lineColor;
                 Handles.DrawLine(point.anchor, point.controlPoint1, lineThickness);
                 Handles.DrawLine(point.anchor, point.controlPoint2, lineThickness);
                 point.Update(anchor, control1, control2, normal);
+                point.rotation = rotation;
             }
             SplineData data = spline.SplineData;
             if(spline.DrawGizmos)
