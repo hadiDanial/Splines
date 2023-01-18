@@ -50,7 +50,8 @@ namespace Hadi.Splines.Editor
                 else if (point.mode == ControlMode.Aligned)
                     Handles.color = alignedColor;
                 Handles.SphereHandleCap(0, point.controlPoint2 + origin, Quaternion.identity, spline.CONTROL_SIZE, EventType.Repaint);
-                control2 = Handles.PositionHandle(point.controlPoint2 + origin, Quaternion.identity);
+                if(point.mode != ControlMode.Mirrored)
+                    control2 = Handles.PositionHandle(point.controlPoint2 + origin, Quaternion.identity);
                 rotation = Handles.RotationHandle(point.rotation, point.anchor + origin);
                 Handles.color = lineColor;
                 Handles.DrawLine(point.anchor + origin, point.controlPoint1 + origin, lineThickness);
