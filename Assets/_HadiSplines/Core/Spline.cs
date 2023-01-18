@@ -16,6 +16,8 @@ namespace Hadi.Splines
         [SerializeField]
         protected List<Point> splinePointsList;
         [SerializeField]
+        private SplineMode splineMode = SplineMode.Full3D;
+        [SerializeField]
         private SplineRendererType rendererType = SplineRendererType.LineRenderer;
         [SerializeField]
         private SplineData splineData;
@@ -90,7 +92,10 @@ namespace Hadi.Splines
 
             splinePointsList.Add(p1);
             splinePointsList.Add(p2);
-
+            if(closedSpline)
+            {
+                splinePointsList.Add(new Point(Vector3.down, Vector3.right * 0.5f));
+            }
             GenerateSpline();
         }
 
