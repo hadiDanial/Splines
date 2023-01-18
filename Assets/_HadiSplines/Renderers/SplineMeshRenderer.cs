@@ -104,7 +104,7 @@ namespace Hadi.Splines
                     float x = Mathf.Cos(angle) * currentRadius, y = Mathf.Sin(angle) * currentRadius;
                     Vector3 pos; //= Quaternion.Euler(new Vector3(0, y, x)) * cross;
                     Quaternion rot = Quaternion.AngleAxis(angle, splineData.Tangents[i]);
-                    pos = (rot * Vector3.up).normalized * currentRadius;
+                    pos = (rot * splineData.Normals[i]).normalized * currentRadius;
                     vertices[i * currentVerticalResolution + j] = pos + splineData.Points[i] + origin;
                     angle += (angleDelta);
                 }
