@@ -1,14 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Hadi.Splines
 {
-    [RequireComponent(typeof(LineRenderer))]
+    [ExecuteInEditMode]
     internal class SplineLineRenderer : MonoBehaviour, ISplineRenderer
     {
         private LineRenderer lineRenderer;
         private SplineData splineData;
-
         private void Awake()
         {
             InitializeLineRenderer();            
@@ -28,27 +28,19 @@ namespace Hadi.Splines
             lineRenderer.startWidth = 0.05f;
         }
 
-        public void SetPointCount(int count)
-        {
-            lineRenderer.positionCount = count;
-        }
-
-        public void SetPoint(int index, Vector3 point)
-        {
-            lineRenderer.SetPosition(index, point);
-        }
 
         public void SetData(SplineData splineData)
         {
             this.splineData = splineData;
-            int count = splineData.SegmentedPoints.Count;
-            SetPointCount(count);
-            for (int i = 0; i < count; i++)            
+            int count = splineData.Points.Count;
+            lineRenderer.positionCount = count;
+            Vector3 origin = (splineData.useObjectTransform ? splineData.objectTransform.position : Vector3.zero);
+            for (int i = 0; i < splineData.Points.Count; i++)
             {
-                SetPoint(i, splineData.SegmentedPoints[i]);
+                lineRenderer.SetPosition(i, splineData.Points[i] + origin);
             }
         }
-        public void SetClosedShape(bool closed)
+        public void SetClosedSpline(bool closed)
         {
             lineRenderer.loop = closed;
         }
@@ -63,6 +55,16 @@ namespace Hadi.Splines
             this.lineRenderer.positionCount = 0;
         }
 
-
+        public void Destroy()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.delayCall += () =>
+            {
+                if(lineRenderer != null)
+                    DestroyImmediate(lineRenderer);
+                DestroyImmediate(this);
+            };
+#endif
+        }
     }
 }

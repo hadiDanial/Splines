@@ -21,9 +21,13 @@ namespace Hadi.Splines.Editor
         {
             base.OnInspectorGUI();
             var spline = (target as Spline);
-            if(GUILayout.Button("Add Point"))
+            if (GUILayout.Button("Add Point"))
             {
                 spline.AddPoint();
+            }
+            if (GUILayout.Button("Reset Spline"))
+            {
+                spline.ResetSpline();
             }
         }
 
@@ -51,7 +55,8 @@ namespace Hadi.Splines.Editor
                 Handles.color = lineColor;
                 Handles.DrawLine(point.anchor + origin, point.controlPoint1 + origin, lineThickness);
                 Handles.DrawLine(point.anchor + origin, point.controlPoint2 + origin, lineThickness);
-                point.Update(anchor, control1, control2, rotation, origin);
+                if (point.Update(anchor, control1, control2, rotation, origin))
+                    spline.GenerateSpline();
             }
             SplineData data = spline.SplineData;
             if(spline.DrawGizmos)
@@ -59,13 +64,13 @@ namespace Hadi.Splines.Editor
                 Handles.color = Color.white;
                 for (int i = 0; i < data.Normals.Count; i++)
                 {
-                    Vector3 p = data.SegmentedPoints[i];
+                    Vector3 p = data.Points[i] + origin;
                     Handles.DrawLine(p, p + data.Normals[i] * 0.15f);
                 }
                 Handles.color = Color.green;
                 for (int i = 0; i < data.Tangents.Count; i++)
                 {
-                    Vector3 p = data.SegmentedPoints[i];
+                    Vector3 p = data.Points[i] + origin;
                     Handles.DrawLine(p, p + data.Tangents[i] * 0.15f);
                 }
             }

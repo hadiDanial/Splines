@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Hadi.Splines
 {
-    [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
+    [ExecuteInEditMode]
     public class SplineMeshRenderer : MonoBehaviour, ISplineRenderer
     {
         [SerializeField, Range(3,50)]
@@ -24,18 +24,30 @@ namespace Hadi.Splines
         [SerializeField] 
         private Vector2[] uvs;
         private bool isClosed;
-
+        Vector3 origin;
         [Header("DEBUG")]
         [SerializeField] private bool drawVertexIndices = false;
         private Material material;
 
+        private float currentRadius;
+        private int currentVerticalResolution;
+
         private void Awake()
+        {
+            SetupMesh();
+            InitializeMesh();
+        }
+
+        private void SetupMesh()
         {
             mesh = new Mesh();
             mesh.name = "Spline";
             meshRenderer = GetComponent<MeshRenderer>();
-            meshFilter= GetComponent<MeshFilter>();
-            InitializeMesh();
+            meshFilter = GetComponent<MeshFilter>();
+            if (meshRenderer == null)
+                meshRenderer = gameObject.AddComponent<MeshRenderer>();
+            if (meshFilter == null)
+                meshFilter = gameObject.AddComponent<MeshFilter>();
         }
 
         public void Setup(Material material)
@@ -47,6 +59,8 @@ namespace Hadi.Splines
 
         private void InitializeMesh()
         {
+            if(mesh == null) 
+                SetupMesh();
             mesh.Clear();
             mesh.uv = uvs;
             mesh.vertices = vertices;
@@ -58,64 +72,75 @@ namespace Hadi.Splines
         public void SetData(SplineData splineData)
         {
             this.splineData = splineData;
-            int numPoints = splineData.SegmentedPoints.Count * verticalResolution;
+            origin = (splineData.useObjectTransform ? splineData.objectTransform.position : Vector3.zero);
+            currentRadius = radius;
+            currentVerticalResolution = verticalResolution;
+            GenerateMesh();
+        }
+
+        private void GenerateMesh(bool onlyGenerateVertices = false)
+        {
+            int numPoints = splineData.Points.Count * currentVerticalResolution;
+            GenerateVertices(numPoints);
+            if(!onlyGenerateVertices)
+            {
+                GenerateTriangles(numPoints);
+
+            }
+            InitializeMesh();
+        }
+
+        private void GenerateVertices(int numPoints)
+        {
             vertices = new Vector3[numPoints];
             float angle;
-            float angleDelta = 360f / verticalResolution;//(2 * Mathf.PI / verticalResolution);
-            for (int i = 0; i < splineData.SegmentedPoints.Count; i++)
+            float angleDelta = 360f / currentVerticalResolution;//(2 * Mathf.PI / verticalResolution);
+            for (int i = 0; i < splineData.Points.Count; i++)
             {
                 angle = 0;
-                Vector3 cross = Vector3.Cross(splineData.Normals[i], splineData.Tangents[i]).normalized * radius;
-                for (int j = 0; j < verticalResolution; j++)
+                Vector3 cross = Vector3.Cross(splineData.Normals[i], splineData.Tangents[i]).normalized;
+                for (int j = 0; j < currentVerticalResolution; j++)
                 {
-                    float x = Mathf.Cos(angle) * radius, y = Mathf.Sin(angle) * radius;
-                    Vector3 pos;//= Quaternion.Euler(new Vector3(0, y, x)) * cross;
+                    float x = Mathf.Cos(angle) * currentRadius, y = Mathf.Sin(angle) * currentRadius;
+                    Vector3 pos; //= Quaternion.Euler(new Vector3(0, y, x)) * cross;
                     Quaternion rot = Quaternion.AngleAxis(angle, splineData.Tangents[i]);
-                    //pos = rot * Vector3.forward;//splineData.Normals[i];
-                    pos = rot * Vector3.up;
-                    vertices[i * verticalResolution + j] = pos + splineData.SegmentedPoints[i];
+                    pos = (rot * Vector3.up).normalized * currentRadius;
+                    vertices[i * currentVerticalResolution + j] = pos + splineData.Points[i] + origin;
                     angle += (angleDelta);
                 }
             }
+        }
+
+        private void GenerateTriangles(int numPoints)
+        {            
             triangles = new int[(numPoints - 1) * 6];
-            for (int i = 0, triangleIndex = 0; i < splineData.SegmentedPoints.Count - 1; i++)
+            for (int i = 0, triangleIndex = 0; i < splineData.Points.Count - 1; i++)
             {
                 int vertexIndex, startIndex;
-                for (int j = 0; j < verticalResolution - 1; j++, triangleIndex += 6)
+                for (int j = 0; j < currentVerticalResolution - 1; j++, triangleIndex += 6)
                 {
-                    vertexIndex = i * verticalResolution + j;
+                    vertexIndex = i * currentVerticalResolution + j;
                     triangles[triangleIndex] = vertexIndex;
                     triangles[triangleIndex + 1] = vertexIndex + 1;
-                    triangles[triangleIndex + 2] = vertexIndex + verticalResolution; 
+                    triangles[triangleIndex + 2] = vertexIndex + currentVerticalResolution;
                     triangles[triangleIndex + 3] = triangles[triangleIndex + 2];
                     triangles[triangleIndex + 4] = triangles[triangleIndex + 1];
                     triangles[triangleIndex + 5] = triangles[triangleIndex + 3] + 1;
                 }
                 // Last index connects back to start
-                vertexIndex = i * verticalResolution + verticalResolution - 1;
-                startIndex = i * verticalResolution;
+                vertexIndex = i * currentVerticalResolution + currentVerticalResolution - 1;
+                startIndex = i * currentVerticalResolution;
                 triangles[triangleIndex] = vertexIndex;
                 triangles[triangleIndex + 1] = startIndex;
-                triangles[triangleIndex + 2] = vertexIndex + verticalResolution;
+                triangles[triangleIndex + 2] = vertexIndex + currentVerticalResolution;
                 triangles[triangleIndex + 3] = triangles[triangleIndex + 2];
                 triangles[triangleIndex + 4] = triangles[triangleIndex + 1];
-                triangles[triangleIndex + 5] = startIndex + verticalResolution;
+                triangles[triangleIndex + 5] = startIndex + currentVerticalResolution;
                 triangleIndex += 6;
             }
-            InitializeMesh();
         }
 
-        public void SetPoint(int index, Vector3 point)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public void SetPointCount(int count)
-        {
-            return;
-        }
-
-        public void SetClosedShape(bool closed)
+        public void SetClosedSpline(bool closed)
         {
             this.isClosed = closed;
         }
@@ -129,6 +154,34 @@ namespace Hadi.Splines
         {
             mesh.Clear();
         }
+
+        public void Destroy()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.delayCall += () =>
+            {
+                if(meshFilter != null)
+                    DestroyImmediate(meshFilter);
+                if (meshRenderer != null) 
+                    DestroyImmediate(meshRenderer);
+                DestroyImmediate(this);
+            };
+#endif
+        }
+
+        private void OnValidate()
+        {
+            if(currentRadius != radius)
+            {
+                currentRadius = radius;
+                GenerateMesh(true);
+            }
+            else if(currentVerticalResolution != verticalResolution)
+            {
+                currentVerticalResolution = verticalResolution;
+                GenerateMesh();
+            }
+        } 
 
         private void OnDrawGizmos()
         {
@@ -147,6 +200,7 @@ namespace Hadi.Splines
             }
 
             Gizmos.color = Color.black;
+            if(triangles != null)
             for (int i = 0; i < triangles.Length; i+=3)
             {
                 Gizmos.DrawLine(vertices[triangles[i]], vertices[triangles[i + 1]]);

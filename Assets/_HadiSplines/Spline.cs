@@ -1,10 +1,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting.YamlDotNet.Core.Tokens;
 using UnityEngine;
 
 namespace Hadi.Splines
 {
+    [ExecuteInEditMode]
     public class Spline : MonoBehaviour
     {
         [SerializeField]
@@ -12,7 +14,7 @@ namespace Hadi.Splines
         [SerializeField, Range(1, 100)]
         protected int segmentsPerCurve = 10;
         [SerializeField]
-        protected List<Point> points;
+        protected List<Point> splinePointsList;
         [SerializeField]
         private SplineRendererType rendererType = SplineRendererType.LineRenderer;
         [SerializeField]
@@ -24,6 +26,7 @@ namespace Hadi.Splines
         private Material material;
 
         private ISplineRenderer splineRenderer;
+        private SplineRendererType previousRendererType = SplineRendererType.LineRenderer;
 
         [Header("DEBUG")]
         [SerializeField]
@@ -34,7 +37,7 @@ namespace Hadi.Splines
         private float controlSize = 0.2f;
         [Range(0.01F, 0.5F), SerializeField]
         private float anchorSize = 0.15f;
-        private Vector3 origin;
+        [SerializeField] private bool resetSplineOnPlay = false;
 
         /// <summary>
         /// Number of points per curve (two anchors, and a control point for each anchor).
@@ -52,69 +55,83 @@ namespace Hadi.Splines
         private void Awake()
         {
             SetRendererType();
-            points = new List<Point>();
+            splinePointsList = new List<Point>();
             SplineData = new SplineData();
+            SplineData.objectTransform = transform;
+            SplineData.useObjectTransform = useGameObjectPosition;
         }
 
         private void Start()
         {
-            GenerateCurve();
+            if (resetSplineOnPlay || splinePointsList.Count == 0)
+                ResetSpline();
+            else
+                GenerateSpline();
         }
 
         [ContextMenu("Add Point")]
         public void AddPoint()
         {
-            points.Add(new Point(Vector3.zero, Vector3.left, Vector3.right));
+            Point lastPoint = splinePointsList[splinePointsList.Count - 1];
+            Vector3 tangent;
+            if (splineData.Tangents.Count > 1)
+                tangent = splineData.Tangents[splineData.Tangents.Count - 1].normalized;
+            else 
+                tangent = Vector3.right;
+            Vector3 newPointPosition = lastPoint.anchor + tangent * 2;
+            splinePointsList.Add(new Point(newPointPosition, -tangent));
+            GenerateSpline();
         }
-        private void GenerateCurve()
+        public void ResetSpline()
         {
-            Point p1 = new Point(new Vector3(-2, -1), Vector3.left * 5, Vector3.right + Vector3.one * 0.25f);
-            Point p2 = new Point(Vector3.one, Vector3.left, Vector3.right);
-            Point p3 = new Point(Vector3.zero, Vector3.left, Vector3.right);
-            Point p4 = new Point(Vector3.one, new Vector2(-0.3f, 0.75f), 1f, 0.75f);
-            Point p5 = new Point(new Vector3(3, -4), new Vector2(0, 0.75f), 1f, 0.75f);
-            Point p6 = new Point(Vector3.zero, Vector3.left, Vector3.right);
-            Point p7 = new Point(Vector3.right*3, Vector3.left, Vector3.right);
+            splinePointsList.Clear();
+            Point p1 = new Point(Vector3.left, Vector3.left * 0.5f);
+            Point p2 = new Point(Vector3.right, Vector3.left * 0.5f);
 
-            points.Add(p3);
-            points.Add(p7);
+            splinePointsList.Add(p1);
+            splinePointsList.Add(p2);
+
+            GenerateSpline();
         }
 
         [ContextMenu("Setup Renderer")]
         protected void SetRendererType()
         {
-            splineRenderer = GetComponent<ISplineRenderer>();
-            if (splineRenderer != null)
-                return;
+            //splineRenderer = GetComponent<ISplineRenderer>();
+            //if (splineRenderer != null)
+            //    return;
             switch (rendererType)
             {
                 case SplineRendererType.LineRenderer:
-                    splineRenderer = gameObject.AddComponent<SplineLineRenderer>();
+                    splineRenderer = GetNewRenderer<SplineLineRenderer>();
                     break;
                 case SplineRendererType.MeshRenderer:
-                    splineRenderer = gameObject.AddComponent<SplineMeshRenderer>();
+                    splineRenderer = GetNewRenderer<SplineMeshRenderer>();
                     break;
                 case SplineRendererType.QuadRenderer:
                     break;
                 default:
-                    splineRenderer = gameObject.AddComponent<SplineLineRenderer>();
+                    splineRenderer = GetNewRenderer<SplineLineRenderer>();
                     break;
             }
+            previousRendererType = rendererType;
             splineRenderer.Setup(material);
+            splineRenderer.SetData(splineData);
         }
-
-        void Update()
+        private ISplineRenderer GetNewRenderer<T>() where T : MonoBehaviour, ISplineRenderer
         {
-            SetupSplinePoints();
+            ISplineRenderer renderer = GetComponent<T>();
+            if(renderer == null)
+                renderer = gameObject.AddComponent<T>();
+            return renderer;
         }
-
         /// <summary>
         /// Setup the spline based on the curves list.
         /// </summary>
-        [ContextMenu("Set Points")]
-        protected virtual void SetupSplinePoints()
+        [ContextMenu("Generate")]
+        public virtual void GenerateSpline()
         {
-            int pointsCount = points.Count;
+            int pointsCount = splinePointsList.Count;
             if (splineRenderer == null)
             {
                 SetRendererType();
@@ -128,23 +145,21 @@ namespace Hadi.Splines
             }
             int pointsPerCurve = segmentsPerCurve * POINT_COUNT_PER_CURVE;
             int numPositions = pointsCount * POINT_COUNT_PER_CURVE * (pointsPerCurve + 1);//points.Count * segmentsPerCurve;
-            splineRenderer.SetPointCount(closedSpline ? numPositions + pointsPerCurve : numPositions);
+            //splineRenderer.SetPointCount(closedSpline ? numPositions + pointsPerCurve : numPositions);
 
-            SplineData.Clear();
-
-            origin = (useGameObjectPosition ? transform.position : Vector3.zero);
+            SplineData.Clear();            
 
             for (int i = 0; i < pointsCount - 1; i++)
             {
-                CalculateSegmentedPoints(points[i], points[i + 1], i);
+                CalculateCurve(splinePointsList[i], splinePointsList[i + 1], i);
             }
             if (closedSpline)
             {
-                splineRenderer.SetClosedShape(true);
+                splineRenderer?.SetClosedSpline(true);
                 CloseSpline();
             }
             else
-                splineRenderer.SetClosedShape(false);
+                splineRenderer?.SetClosedSpline(false);
 
             SplineData.CalculateLength();
             splineRenderer.SetData(SplineData);
@@ -155,21 +170,22 @@ namespace Hadi.Splines
         /// </summary>
         protected virtual void CloseSpline()
         {
-            if (points.Count < 3)
+            if (splinePointsList.Count < 3)
             {
                 Debug.LogError("Cannot close a spline with less than three points! " + gameObject.name);
                 closedSpline = false;
                 return;
             }
-            CalculateSegmentedPoints(points[points.Count - 1], points[0], points.Count - 1);
+            CalculateCurve(splinePointsList[splinePointsList.Count - 1], splinePointsList[0], splinePointsList.Count - 1);
         }
 
         /// <summary>
-        /// Calculates a cubic bezier using polynomial coefficients, split into segments, and saves the results in <code>segmentedPoints.</code>
+        /// Calculates a cubic bezier curve between two points using polynomial coefficients, split into segments, and saves the results in <code>SplineData.</code>
         /// </summary>
-        /// <param name="curve"></param>
-        /// <param name="index"></param>
-        protected virtual void CalculateSegmentedPoints(Point P1, Point P2, int index)
+        /// <param name="P1">First point.</param>
+        /// <param name="P2">Second point.</param>
+        /// <param name="index">Index of the curve in the spline.</param>
+        protected virtual void CalculateCurve(Point P1, Point P2, int index)
         {
             int totalSegments = segmentsPerCurve * POINT_COUNT_PER_CURVE;
 
@@ -189,18 +205,26 @@ namespace Hadi.Splines
             CalculatePoint(P1, P2, factor0, factor1, factor2, factor3, 1);
         }
 
+        /// <summary>
+        /// Calculate SplineData between points P1 and P2 at t-percent.
+        /// </summary>
+        /// <param name="P1">First point</param>
+        /// <param name="P2">Second point</param>
+        /// <param name="factor0">First factor in a polynomial representation of the curve (*1).</param>
+        /// <param name="factor1">Second factor in a polynomial representation of the curve (*t).</param>
+        /// <param name="factor2">Third factor in a polynomial representation of the curve (*t^2).</param>
+        /// <param name="factor3">Fourth factor in a polynomial representation of the curve (*t^3).</param>
+        /// <param name="t">Percentage along the curve.</param>
         private void CalculatePoint(Point P1, Point P2, Vector3 factor0, Vector3 factor1, Vector3 factor2, Vector3 factor3, float t)
         {
             float t2 = t * t;
             float t3 = t2 * t;
-            
-            Vector3 P = factor0 + t * factor1 + t2 * factor2 + t3 * factor3 + origin;
-            SplineData.SegmentedPoints.Add(P);
+
+            Vector3 P = factor0 + t * factor1 + t2 * factor2 + t3 * factor3;
+            SplineData.Points.Add(P);
             P = factor1 + 2 * t * factor2 + 3 * t2 * factor3;
             SplineData.Tangents.Add(P);
-            //P = Vector3.Cross(Quaternion.Lerp(P1.anchorRotation, P2.anchorRotation, t).eulerAngles, P); // Cross the tangent vector with the normal of the two points (lerped)
             P = Quaternion.Slerp(P1.rotation, P2.rotation, t) * Vector3.up;
-            //P = Vector3.Lerp(P1.normal, P2.normal, t);
             SplineData.Normals.Add(P.normalized);
         }
 
@@ -226,34 +250,33 @@ namespace Hadi.Splines
 
         protected void OnValidate()
         {
-            if (points == null) return;
-            if (points.Count == 0) return;
-            foreach (Point point in points)
+            if (splinePointsList == null) return;
+            if (splinePointsList.Count == 0) return;
+            foreach (Point point in splinePointsList)
             {
                 point.Refresh();
             }
-        }
+            SplineData.useObjectTransform = useGameObjectPosition;
+            SplineData.objectTransform = transform;
+            if (rendererType != previousRendererType)
+            {
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.delayCall += () =>
+                {
+                    previousRendererType = rendererType;
+                    splineRenderer?.Destroy();
+                    splineRenderer = null;
+                    SetRendererType();
 
-        //private void OnDrawGizmos()
-        //{
-        //    if (points.Count == 0 || !drawGizmos) return;
-        //    if (normals.Count == 0 || !drawNormals) return;
-        //    Gizmos.color = Color.red;
-        //    for (int i = 0; i < normals.Count; i++)
-        //    {
-        //        Gizmos.DrawRay(segmentedPoints[i], normals[i] * 0.15f);
-        //    }
-        //    Gizmos.color = Color.green;
-        //    if (tangents.Count == 0 || !drawTangents) return;
-        //    for (int i = 0; i < tangents.Count; i++)
-        //    {
-        //        Gizmos.DrawRay(segmentedPoints[i], tangents[i] * 0.15f);
-        //    }
-        //}
+                };
+#endif
+            }
+            GenerateSpline();
+        }
 
         public List<Point> GetPoints()
         {
-            return points;
+            return splinePointsList;
         }
     }
 }
