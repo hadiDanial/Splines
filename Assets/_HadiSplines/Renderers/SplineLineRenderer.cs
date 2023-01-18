@@ -11,10 +11,16 @@ namespace Hadi.Splines
 
         private void Awake()
         {
-            Setup();
+            InitializeLineRenderer();            
         }
 
-        public void Setup()
+        public void Setup(Material material)
+        {
+            InitializeLineRenderer();
+            lineRenderer.material = material;
+        }
+
+        private void InitializeLineRenderer()
         {
             lineRenderer = GetComponent<LineRenderer>();
             if (lineRenderer == null)

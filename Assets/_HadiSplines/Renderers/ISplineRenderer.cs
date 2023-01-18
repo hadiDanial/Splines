@@ -5,7 +5,7 @@ namespace Hadi.Splines
 {
     internal interface ISplineRenderer
     {
-        public void Setup();
+        public void Setup(Material material);
         public void SetData(SplineData splineData);        
         public void SetPoint(int index, Vector3 point);
         public void SetPointCount(int count);

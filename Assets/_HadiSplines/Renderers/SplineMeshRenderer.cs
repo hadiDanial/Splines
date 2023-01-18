@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 namespace Hadi.Splines
@@ -24,16 +25,27 @@ namespace Hadi.Splines
         private Vector2[] uvs;
         private bool isClosed;
 
+        [Header("DEBUG")]
+        [SerializeField] private bool drawVertexIndices = false;
+        private Material material;
+
         private void Awake()
         {
             mesh = new Mesh();
             mesh.name = "Spline";
             meshRenderer = GetComponent<MeshRenderer>();
             meshFilter= GetComponent<MeshFilter>();
-            Setup();
+            InitializeMesh();
         }
 
-        public void Setup()
+        public void Setup(Material material)
+        {
+            this.material = material;            
+            InitializeMesh();
+            meshRenderer.sharedMaterial = material;
+        }
+
+        private void InitializeMesh()
         {
             mesh.Clear();
             mesh.uv = uvs;
@@ -58,27 +70,39 @@ namespace Hadi.Splines
                 {
                     float x = Mathf.Cos(angle) * radius, y = Mathf.Sin(angle) * radius;
                     Vector3 pos;//= Quaternion.Euler(new Vector3(0, y, x)) * cross;
-                    Quaternion rot = Quaternion.AngleAxis(angle, cross);
+                    Quaternion rot = Quaternion.AngleAxis(angle, splineData.Tangents[i]);
                     //pos = rot * Vector3.forward;//splineData.Normals[i];
-                    pos = rot * new Vector3(0, y, x);
+                    pos = rot * Vector3.up;
                     vertices[i * verticalResolution + j] = pos + splineData.SegmentedPoints[i];
                     angle += (angleDelta);
                 }
             }
-            triangles = new int[numPoints * 6];
+            triangles = new int[(numPoints - 1) * 6];
             for (int i = 0, triangleIndex = 0; i < splineData.SegmentedPoints.Count - 1; i++)
             {
+                int vertexIndex, startIndex;
                 for (int j = 0; j < verticalResolution - 1; j++, triangleIndex += 6)
                 {
-                    int vertexIndex = i * verticalResolution + j;
+                    vertexIndex = i * verticalResolution + j;
                     triangles[triangleIndex] = vertexIndex;
-                    triangles[triangleIndex + 3] = triangles[triangleIndex + 2] = vertexIndex + verticalResolution + 1;
-                    triangles[triangleIndex + 4] = triangles[triangleIndex + 1] = vertexIndex + 1;
-                    triangles[triangleIndex + 5] = vertexIndex + verticalResolution + 2;
-                    if (triangles[triangleIndex + 5] == numPoints) triangles[triangleIndex + 5] = 0;
+                    triangles[triangleIndex + 1] = vertexIndex + 1;
+                    triangles[triangleIndex + 2] = vertexIndex + verticalResolution; 
+                    triangles[triangleIndex + 3] = triangles[triangleIndex + 2];
+                    triangles[triangleIndex + 4] = triangles[triangleIndex + 1];
+                    triangles[triangleIndex + 5] = triangles[triangleIndex + 3] + 1;
                 }
+                // Last index connects back to start
+                vertexIndex = i * verticalResolution + verticalResolution - 1;
+                startIndex = i * verticalResolution;
+                triangles[triangleIndex] = vertexIndex;
+                triangles[triangleIndex + 1] = startIndex;
+                triangles[triangleIndex + 2] = vertexIndex + verticalResolution;
+                triangles[triangleIndex + 3] = triangles[triangleIndex + 2];
+                triangles[triangleIndex + 4] = triangles[triangleIndex + 1];
+                triangles[triangleIndex + 5] = startIndex + verticalResolution;
+                triangleIndex += 6;
             }
-            Setup();
+            InitializeMesh();
         }
 
         public void SetPoint(int index, Vector3 point)
@@ -110,10 +134,18 @@ namespace Hadi.Splines
         {
             if (vertices == null || vertices.Length == 0) return;
             Gizmos.color = Color.red;
-            foreach (var item in vertices)
+            GUIStyle style = new GUIStyle();
+            style.fontSize = 20;
+            style.fontStyle= FontStyle.Bold;
+            style.normal.textColor = Color.white;
+
+            for (int i = 0; i < vertices.Length; i++)
             {
-                Gizmos.DrawSphere(item, 0.01f);
+                Gizmos.DrawSphere(vertices[i], 0.01f);
+                if(drawVertexIndices)
+                    Handles.Label(vertices[i] + Vector3.right * 0.05f, i + "", style);
             }
+
             Gizmos.color = Color.black;
             for (int i = 0; i < triangles.Length; i+=3)
             {
