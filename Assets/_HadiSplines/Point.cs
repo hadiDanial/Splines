@@ -7,7 +7,6 @@ namespace Hadi.Splines
     public class Point
     {
         public Vector3 anchor;
-        public Vector3 normal = Vector3.up;
         public Quaternion rotation = Quaternion.identity;
         public Vector3 controlPoint1, controlPoint2;
         private Vector3 relativeControlPoint1, relativeControlPoint2;
@@ -72,7 +71,6 @@ namespace Hadi.Splines
         {
             relativeControlPoint1 = controlPoint1 - anchor;
             relativeControlPoint2 = controlPoint2 - anchor;
-            normal.Normalize();
             switch (mode)
             {
                 case ControlMode.Aligned:
@@ -98,9 +96,12 @@ namespace Hadi.Splines
             this.controlPoint2 = anchor - relativeControlPoint1;
         }
 
-        public void Update(Vector3 anchor, Vector3 control1, Vector3 control2, Vector3 normal)
+        public void Update(Vector3 anchor, Vector3 control1, Vector3 control2, Quaternion rotation, Vector3 origin)
         {
             bool refresh = false;
+            anchor -= origin;
+            control1 -= origin;
+            control2 -= origin;
             if(!this.anchor.Equals(anchor))
             {
                 this.anchor = anchor;
@@ -108,14 +109,17 @@ namespace Hadi.Splines
                 this.controlPoint2 = anchor + relativeControlPoint2;
                 refresh = true;
             }
-            else if(!this.controlPoint1.Equals(control1) || !this.controlPoint2.Equals(control2) || !this.normal.Equals(normal))
+            else if(!this.controlPoint1.Equals(control1) || !this.controlPoint2.Equals(control2))
             {
                 refresh = true;            
                 this.controlPoint1 = control1;
                 this.controlPoint2 = control2;
-                this.normal = normal.normalized;
             }
-
+            if(!this.rotation.Equals(rotation))
+            {
+                refresh = true;
+                this.rotation = rotation;
+            }
             if (refresh)
                 Refresh();
         }

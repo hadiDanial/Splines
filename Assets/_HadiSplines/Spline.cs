@@ -17,6 +17,11 @@ namespace Hadi.Splines
         private SplineRendererType rendererType = SplineRendererType.LineRenderer;
         [SerializeField]
         private SplineData splineData;
+        [SerializeField]
+        private bool useGameObjectPosition = false;
+
+        [SerializeField]
+        private Material material;
 
         private ISplineRenderer splineRenderer;
 
@@ -29,6 +34,7 @@ namespace Hadi.Splines
         private float controlSize = 0.2f;
         [Range(0.01F, 0.5F), SerializeField]
         private float anchorSize = 0.15f;
+        private Vector3 origin;
 
         /// <summary>
         /// Number of points per curve (two anchors, and a control point for each anchor).
@@ -41,6 +47,7 @@ namespace Hadi.Splines
         public bool DrawGizmos { get => drawGizmos; }
         public bool DrawNormals { get => drawNormals; }
         public bool DrawTangents { get => drawTangents; }
+        public bool UseGameObjectPosition { get => useGameObjectPosition; }
 
         private void Awake()
         {
@@ -93,7 +100,7 @@ namespace Hadi.Splines
                     splineRenderer = gameObject.AddComponent<SplineLineRenderer>();
                     break;
             }
-            splineRenderer.Setup();
+            splineRenderer.Setup(material);
         }
 
         void Update()
@@ -124,7 +131,9 @@ namespace Hadi.Splines
             splineRenderer.SetPointCount(closedSpline ? numPositions + pointsPerCurve : numPositions);
 
             SplineData.Clear();
-            
+
+            origin = (useGameObjectPosition ? transform.position : Vector3.zero);
+
             for (int i = 0; i < pointsCount - 1; i++)
             {
                 CalculateSegmentedPoints(points[i], points[i + 1], i);
@@ -184,7 +193,8 @@ namespace Hadi.Splines
         {
             float t2 = t * t;
             float t3 = t2 * t;
-            Vector3 P = factor0 + t * factor1 + t2 * factor2 + t3 * factor3;
+            
+            Vector3 P = factor0 + t * factor1 + t2 * factor2 + t3 * factor3 + origin;
             SplineData.SegmentedPoints.Add(P);
             P = factor1 + 2 * t * factor2 + 3 * t2 * factor3;
             SplineData.Tangents.Add(P);
