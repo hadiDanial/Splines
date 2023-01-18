@@ -96,7 +96,7 @@ namespace Hadi.Splines
             this.controlPoint2 = anchor - relativeControlPoint1;
         }
 
-        public void Update(Vector3 anchor, Vector3 control1, Vector3 control2, Quaternion rotation, Vector3 origin)
+        public bool Update(Vector3 anchor, Vector3 control1, Vector3 control2, Quaternion rotation, Vector3 origin)
         {
             bool refresh = false;
             anchor -= origin;
@@ -104,10 +104,10 @@ namespace Hadi.Splines
             control2 -= origin;
             if(!this.anchor.Equals(anchor))
             {
+                refresh = true;
                 this.anchor = anchor;
                 this.controlPoint1 = anchor + relativeControlPoint1;
                 this.controlPoint2 = anchor + relativeControlPoint2;
-                refresh = true;
             }
             else if(!this.controlPoint1.Equals(control1) || !this.controlPoint2.Equals(control2))
             {
@@ -122,6 +122,7 @@ namespace Hadi.Splines
             }
             if (refresh)
                 Refresh();
+            return refresh;
         }
     }
 }
