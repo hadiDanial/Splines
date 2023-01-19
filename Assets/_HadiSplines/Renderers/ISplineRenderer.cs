@@ -38,6 +38,8 @@ namespace Hadi.Splines
         /// Destroy the spline renderer and all of its related components.
         /// </summary>
         public void Destroy();
+
+        public SplineRendererType GetRendererType();
     }
 
     public enum SplineRendererType

@@ -66,5 +66,10 @@ namespace Hadi.Splines
             };
 #endif
         }
+        public SplineRendererType GetRendererType()
+        {
+            return SplineRendererType.LineRenderer;
+        }
+
     }
 }

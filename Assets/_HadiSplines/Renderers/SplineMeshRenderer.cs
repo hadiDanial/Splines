@@ -8,10 +8,15 @@ namespace Hadi.Splines
     [ExecuteInEditMode]
     public class SplineMeshRenderer : MonoBehaviour, ISplineRenderer
     {
-        [SerializeField, Range(3,50)]
+        [SerializeField, Range(3, 50)]
         private int verticalResolution = 10;
-        [SerializeField, Range(0.01f, 3f)] 
+        [SerializeField, Range(0.01f, 3f)]
         private float radius = 0.25f;
+        [SerializeField]
+        private bool useAnimationCurveForRadius = true;
+        [SerializeField]
+        private AnimationCurve radiusOverSpline = AnimationCurve.Constant(0, 1, 1);
+
 
         private Mesh mesh;
         private MeshFilter meshFilter;
@@ -21,7 +26,7 @@ namespace Hadi.Splines
         private int[] triangles;
         [SerializeField]
         private Vector3[] vertices;
-        [SerializeField] 
+        [SerializeField]
         private Vector2[] uvs;
         private bool isClosed;
         Vector3 origin;
@@ -52,14 +57,14 @@ namespace Hadi.Splines
 
         public void Setup(Material material)
         {
-            this.material = material;            
+            this.material = material;
             InitializeMesh();
             meshRenderer.sharedMaterial = material;
         }
 
         private void InitializeMesh()
         {
-            if(mesh == null) 
+            if (mesh == null)
                 SetupMesh();
             mesh.Clear();
             mesh.uv = uvs;
@@ -82,7 +87,7 @@ namespace Hadi.Splines
         {
             int numPoints = splineData.Points.Count * currentVerticalResolution;
             GenerateVertices(numPoints);
-            if(!onlyGenerateVertices)
+            if (!onlyGenerateVertices)
             {
                 GenerateTriangles(numPoints);
 
@@ -94,17 +99,22 @@ namespace Hadi.Splines
         {
             vertices = new Vector3[numPoints];
             float angle;
-            float angleDelta = 360f / currentVerticalResolution;//(2 * Mathf.PI / verticalResolution);
+            float angleDelta = 360f / currentVerticalResolution;
+            float t;
             for (int i = 0; i < splineData.Points.Count; i++)
             {
                 angle = 0;
-                Vector3 cross = Vector3.Cross(splineData.Normals[i], splineData.Tangents[i]).normalized;
+                t = (float)i / splineData.Points.Count;
+                //Vector3 cross = Vector3.Cross(splineData.Normals[i], splineData.Tangents[i]).normalized;
                 for (int j = 0; j < currentVerticalResolution; j++)
                 {
-                    float x = Mathf.Cos(angle) * currentRadius, y = Mathf.Sin(angle) * currentRadius;
+                    //float x = Mathf.Cos(angle) * currentRadius, y = Mathf.Sin(angle) * currentRadius;
                     Vector3 pos; //= Quaternion.Euler(new Vector3(0, y, x)) * cross;
                     Quaternion rot = Quaternion.AngleAxis(angle, splineData.Tangents[i]);
-                    pos = (rot * splineData.Normals[i]).normalized * currentRadius;
+                    pos = (rot * splineData.Normals[i]).normalized;
+                    if (useAnimationCurveForRadius)
+                        pos *= radiusOverSpline.Evaluate(t) * currentRadius;
+                    else pos *= currentRadius;
                     vertices[i * currentVerticalResolution + j] = pos + splineData.Points[i] + origin;
                     angle += (angleDelta);
                 }
@@ -112,7 +122,7 @@ namespace Hadi.Splines
         }
 
         private void GenerateTriangles(int numPoints)
-        {            
+        {
             triangles = new int[(numPoints - 1) * 6];
             for (int i = 0, triangleIndex = 0; i < splineData.Points.Count - 1; i++)
             {
@@ -160,28 +170,42 @@ namespace Hadi.Splines
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.delayCall += () =>
             {
-                if(meshFilter != null)
+                if (meshFilter != null)
                     DestroyImmediate(meshFilter);
-                if (meshRenderer != null) 
+                if (meshRenderer != null)
                     DestroyImmediate(meshRenderer);
                 DestroyImmediate(this);
             };
 #endif
         }
+        public SplineRendererType GetRendererType()
+        {
+            return SplineRendererType.MeshRenderer;
+        }
 
         private void OnValidate()
         {
-            if(currentRadius != radius)
+            if (currentRadius != radius)
             {
                 currentRadius = radius;
-                GenerateMesh(true);
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.delayCall += () =>
+                {
+                    GenerateMesh();
+                };
+#endif
             }
-            else if(currentVerticalResolution != verticalResolution)
+            else if (currentVerticalResolution != verticalResolution)
             {
                 currentVerticalResolution = verticalResolution;
-                GenerateMesh();
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.delayCall += () =>
+                {
+                    GenerateMesh();
+                };
+#endif
             }
-        } 
+        }
 
         private void OnDrawGizmos()
         {
@@ -189,24 +213,24 @@ namespace Hadi.Splines
             Gizmos.color = Color.red;
             GUIStyle style = new GUIStyle();
             style.fontSize = 20;
-            style.fontStyle= FontStyle.Bold;
+            style.fontStyle = FontStyle.Bold;
             style.normal.textColor = Color.white;
 
             for (int i = 0; i < vertices.Length; i++)
             {
                 Gizmos.DrawSphere(vertices[i], 0.01f);
-                if(drawVertexIndices)
+                if (drawVertexIndices)
                     Handles.Label(vertices[i] + Vector3.right * 0.05f, i + "", style);
             }
 
             Gizmos.color = Color.black;
-            if(triangles != null)
-            for (int i = 0; i < triangles.Length; i+=3)
-            {
-                Gizmos.DrawLine(vertices[triangles[i]], vertices[triangles[i + 1]]);
-                Gizmos.DrawLine(vertices[triangles[i+ 1]], vertices[triangles[i + 2]]);
-                Gizmos.DrawLine(vertices[triangles[i]], vertices[triangles[i + 2]]);
-            }
+            if (triangles != null)
+                for (int i = 0; i < triangles.Length; i += 3)
+                {
+                    Gizmos.DrawLine(vertices[triangles[i]], vertices[triangles[i + 1]]);
+                    Gizmos.DrawLine(vertices[triangles[i + 1]], vertices[triangles[i + 2]]);
+                    Gizmos.DrawLine(vertices[triangles[i]], vertices[triangles[i + 2]]);
+                }
         }
     }
 
