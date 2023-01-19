@@ -10,13 +10,15 @@ namespace Hadi.Splines
         public Vector3 normal;
         public Vector3 tangent;
         public Vector3 velocity;
+        public int index;
 
-        public SplineDataAtPoint(Vector3 position, Vector3 normal, Vector3 tangent, Vector3 velocity)
+        public SplineDataAtPoint(Vector3 position, Vector3 normal, Vector3 tangent, Vector3 velocity, int index)
         {
             this.position = position;
             this.normal = normal;
             this.tangent = tangent;
             this.velocity = velocity;
+            this.index = index;
         }
 
         public override string ToString()

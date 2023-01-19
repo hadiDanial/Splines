@@ -351,11 +351,10 @@ namespace Hadi.Splines
         private SplineSegment GetSplineSegment(float percentageAlongSpline)
         {
             percentageAlongSpline = CalculateEndOfSplineInstruction(percentageAlongSpline);
-            int numSegments = splineData.Points.Count;// + (closedSpline ? 1 : 0);
+            int numSegments = splineData.Points.Count;
             float percentPerSegment = 1f / numSegments;
             int segmentIndex = Mathf.FloorToInt(percentageAlongSpline * numSegments);
             float t = (percentageAlongSpline - segmentIndex * percentPerSegment) * numSegments;
-            float lastPointPercentage = ((float)numSegments - 1) / numSegments;
             return new SplineSegment(t, segmentIndex);
         }
 
@@ -379,22 +378,22 @@ namespace Hadi.Splines
             return value;
         }
 
-        internal SplineDataAtPoint GetDataAtDistance(float distance)
+        internal SplineDataAtPoint GetDataAtDistance(float distance, int index = 0)
         {
             float maxDistance = splineData.Length, initialDistance = distance;
-            float t = 0, localT = 0;
+            float t = 0; 
             int count = splineData.CumulativeLengthAtPoint.Count;
             bool found = false;
             distance = CalculateEndOfSplineInstruction(distance, maxDistance);
             int numSegments = splineData.Points.Count + (closedSpline ? 1 : 0);
             float percentPerSegment = 1f / numSegments;
 
-            for (int i = 0; i < count - 1; i++)
+            for (int i = index; i < count - 1; i++)
             {
-                float currentDistance = splineData.CumulativeLengthAtPoint[i + 1] - splineData.CumulativeLengthAtPoint[i];
                 if (splineData.CumulativeLengthAtPoint[i] < distance && splineData.CumulativeLengthAtPoint[i + 1] > distance)
                 {
-                    localT = ((distance - splineData.CumulativeLengthAtPoint[i]) / currentDistance ) ;
+                    float currentDistance = splineData.CumulativeLengthAtPoint[i + 1] - splineData.CumulativeLengthAtPoint[i];
+                    float localT = ((distance - splineData.CumulativeLengthAtPoint[i]) / currentDistance ) ;
                     t = ((float)i / count) + Mathf.Lerp(0, percentPerSegment, localT);
                     found = true;
                 }

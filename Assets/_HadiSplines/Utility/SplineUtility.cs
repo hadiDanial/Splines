@@ -30,7 +30,7 @@ namespace Hadi.Splines
         public static SplineDataAtPoint GetDataAtSegment(SplineData SplineData, SplineSegment segment, bool looped)
         {
             Vector3 velocity = LerpVelocity(SplineData, segment, looped);
-            return new SplineDataAtPoint(LerpPosition(SplineData, segment, looped), LerpNormal(SplineData, segment, looped), velocity.normalized, velocity);
+            return new SplineDataAtPoint(LerpPosition(SplineData, segment, looped), LerpNormal(SplineData, segment, looped), velocity.normalized, velocity, segment.pointIndex);
         }
     }
 }
