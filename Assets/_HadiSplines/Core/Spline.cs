@@ -30,7 +30,6 @@ namespace Hadi.Splines
         private Material material;
 
         private ISplineRenderer splineRenderer;
-        private SplineRendererType previousRendererType = SplineRendererType.LineRenderer;
 
         [Header("DEBUG")]
         [SerializeField]
@@ -58,10 +57,12 @@ namespace Hadi.Splines
 
         private void Awake()
         {
-            SetRendererType();
+            //SetRendererType();
             SplineData = new SplineData();
             SplineData.objectTransform = transform;
             SplineData.useObjectTransform = useGameObjectPosition;
+            splineRenderer = GetComponent<ISplineRenderer>();
+            rendererType = splineRenderer.GetRendererType();
         }
 
         private void Start()
@@ -79,7 +80,7 @@ namespace Hadi.Splines
             Vector3 tangent;
             if (splineData.Tangents.Count > 1)
                 tangent = splineData.Tangents[splineData.Tangents.Count - 1].normalized;
-            else 
+            else
                 tangent = Vector3.right;
             Vector3 newPointPosition = lastPoint.anchor + tangent * 2;
             splinePointsList.Add(new Point(newPointPosition, -tangent));
@@ -93,7 +94,7 @@ namespace Hadi.Splines
 
             splinePointsList.Add(p1);
             splinePointsList.Add(p2);
-            if(closedSpline)
+            if (closedSpline)
             {
                 splinePointsList.Add(new Point(Vector3.down, Vector3.right * 0.5f));
             }
@@ -117,14 +118,13 @@ namespace Hadi.Splines
                     splineRenderer = GetNewRenderer<SplineLineRenderer>();
                     break;
             }
-            previousRendererType = rendererType;
             splineRenderer.Setup(material);
             splineRenderer.SetData(splineData);
         }
         private ISplineRenderer GetNewRenderer<T>() where T : MonoBehaviour, ISplineRenderer
         {
             ISplineRenderer renderer = GetComponent<T>();
-            if(renderer == null)
+            if (renderer == null)
                 renderer = gameObject.AddComponent<T>();
             return renderer;
         }
@@ -151,7 +151,7 @@ namespace Hadi.Splines
             int numPositions = pointsCount * POINT_COUNT_PER_CURVE * (pointsPerCurve + 1);//points.Count * segmentsPerCurve;
             //splineRenderer.SetPointCount(closedSpline ? numPositions + pointsPerCurve : numPositions);
 
-            SplineData.Clear();            
+            SplineData.Clear();
 
             for (int i = 0; i < pointsCount - 1; i++)
             {
@@ -198,7 +198,7 @@ namespace Hadi.Splines
             Vector3 factor0 = P1.anchor, factor1 = -3 * P1.anchor + 3 * P1.controlPoint2;
             Vector3 factor2 = 3 * P1.anchor - 6 * P1.controlPoint2 + 3 * P2.controlPoint1;
             Vector3 factor3 = -P1.anchor + 3 * P1.controlPoint2 - 3 * P2.controlPoint1 + P2.anchor;
-            int start = index * segmentsPerCurve * POINT_COUNT_PER_CURVE, end = start + totalSegments - (isClosingCurve ? 1 : 0);
+            int start = index * segmentsPerCurve * POINT_COUNT_PER_CURVE, end = start + totalSegments;
             for (int i = start; i < end; i++)
             {
                 float t = ((float)i % totalSegments) / (end - start);
@@ -206,7 +206,8 @@ namespace Hadi.Splines
                 CalculatePoint(P1, P2, factor0, factor1, factor2, factor3, t);
             }
             // t = 1
-            //CalculatePoint(P1, P2, factor0, factor1, factor2, factor3, 1);
+            if(isClosingCurve)
+                CalculatePoint(P1, P2, factor0, factor1, factor2, factor3, 1);
         }
 
         /// <summary>
@@ -262,12 +263,11 @@ namespace Hadi.Splines
             }
             SplineData.useObjectTransform = useGameObjectPosition;
             SplineData.objectTransform = transform;
-            if (rendererType != previousRendererType)
+            if (splineRenderer != null && rendererType != splineRenderer.GetRendererType())
             {
 #if UNITY_EDITOR
                 UnityEditor.EditorApplication.delayCall += () =>
                 {
-                    previousRendererType = rendererType;
                     splineRenderer?.Destroy();
                     splineRenderer = null;
                     SetRendererType();
@@ -313,7 +313,7 @@ namespace Hadi.Splines
         /// <param name="t">A number between 0 and 1 representing the location along the spline.</param>
         /// <returns></returns>
         public Vector3 GetTangent(float t)
-        {            
+        {
             return GetVelocity(t).normalized;
         }
         /// <summary>
@@ -326,44 +326,81 @@ namespace Hadi.Splines
             SplineSegment segment = GetSplineSegment(t);
             return SplineUtility.LerpVelocity(SplineData, segment);
         }
-       
 
+        /// <summary>
+        /// Gets all the data at time t.
+        /// </summary>
+        /// <param name="t"></param>
+        /// <returns>SplineDataAtPoint that contains position, normal, tangent and velocity data.</returns>
         public SplineDataAtPoint GetDataAtPoint(float t)
         {
             SplineSegment segment = GetSplineSegment(t);
-            Vector3 velocity = SplineUtility.LerpVelocity(SplineData, segment);
-            SplineDataAtPoint data = new SplineDataAtPoint(SplineUtility.LerpPosition(SplineData, segment), SplineUtility.LerpNormal(SplineData, segment), velocity.normalized, velocity);
+            
+            bool looped = closedSpline && segment.pointIndex >= splineData.Points.Count - 1;
+            //print($"index: {segment.pointIndex} / {splineData.Points.Count}  looped={looped}");
+            SplineDataAtPoint data = SplineUtility.GetDataAtSegment(SplineData, segment, looped);
+                
             return data;
         }
 
+        /// <summary>
+        /// Get the appropriate spline segment (index and time) for a percentage along the spline.
+        /// </summary>
+        /// <param name="percentageAlongSpline"></param>
+        /// <returns></returns>
         private SplineSegment GetSplineSegment(float percentageAlongSpline)
         {
-            int numSegments = splineData.Points.Count + (closedSpline ? 1 : 0);
+            percentageAlongSpline = CalculateEndOfSplineInstruction(percentageAlongSpline);
+            int numSegments = splineData.Points.Count;// + (closedSpline ? 1 : 0);
             float percentPerSegment = 1f / numSegments;
+            int segmentIndex = Mathf.FloorToInt(percentageAlongSpline * numSegments);
+            float t = (percentageAlongSpline - segmentIndex * percentPerSegment) * numSegments;
+            float lastPointPercentage = ((float)numSegments - 1) / numSegments;
+            return new SplineSegment(t, segmentIndex);
+        }
+
+        private float CalculateEndOfSplineInstruction(float value, float maxValue = 1f)
+        {
             switch (EndOfSplineInstruction)
             {
                 case EndOfSplineInstruction.End:
-                    if (percentageAlongSpline > 1) percentageAlongSpline = 1;
+                    if (value > maxValue) value = maxValue;
                     break;
                 case EndOfSplineInstruction.Loop:
-                    percentageAlongSpline = Mathf.Repeat(percentageAlongSpline, 1);
+                    value = Mathf.Repeat(value, maxValue);
                     break;
                 case EndOfSplineInstruction.PingPong:
-                    percentageAlongSpline = Mathf.PingPong(percentageAlongSpline, 1);
+                    value = Mathf.PingPong(value, maxValue);
                     break;
                 default:
                     break;
             }
-            int segmentIndex = Mathf.FloorToInt(percentageAlongSpline * numSegments);
-            float t = (percentageAlongSpline - segmentIndex * percentPerSegment) * numSegments;
-            float lastPointPercentage = ((float) numSegments - 1) / numSegments;
-            //if(segmentIndex >= splineData.Points.Count - 1)
-            //{
-            //    segmentIndex = splineData.Points.Count - 1;
-            //   // t = 1;
-            //}
-            print($"{percentageAlongSpline}: Index = {segmentIndex}, t = {t}   -   %perCurve = {percentPerSegment}, numSegments = {numSegments}");
-            return new SplineSegment(t, segmentIndex);
+
+            return value;
+        }
+
+        internal SplineDataAtPoint GetDataAtDistance(float distance)
+        {
+            float maxDistance = splineData.Length, initialDistance = distance;
+            float t = 0, localT = 0;
+            int count = splineData.CumulativeLengthAtPoint.Count;
+            bool found = false;
+            distance = CalculateEndOfSplineInstruction(distance, maxDistance);
+            int numSegments = splineData.Points.Count + (closedSpline ? 1 : 0);
+            float percentPerSegment = 1f / numSegments;
+
+            for (int i = 0; i < count - 1; i++)
+            {
+                float currentDistance = splineData.CumulativeLengthAtPoint[i + 1] - splineData.CumulativeLengthAtPoint[i];
+                if (splineData.CumulativeLengthAtPoint[i] < distance && splineData.CumulativeLengthAtPoint[i + 1] > distance)
+                {
+                    localT = ((distance - splineData.CumulativeLengthAtPoint[i]) / currentDistance ) ;
+                    t = ((float)i / count) + Mathf.Lerp(0, percentPerSegment, localT);
+                    found = true;
+                }
+                if (found) i = count;
+            }
+            return GetDataAtPoint(t);
         }
     }
 }

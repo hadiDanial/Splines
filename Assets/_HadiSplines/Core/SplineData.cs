@@ -11,6 +11,7 @@ namespace Hadi.Splines
         [SerializeField] private List<Vector3> points;
         [SerializeField] private List<Vector3> normals;
         [SerializeField] private List<Vector3> tangents;
+        [SerializeField] private List<float> cumulativeLengthAtPoint;
         private float splineLength;
         public Transform objectTransform;
         public bool useObjectTransform;
@@ -18,12 +19,14 @@ namespace Hadi.Splines
         public List<Vector3> Normals { get => normals; private set => normals = value; }
         public List<Vector3> Tangents { get => tangents; private set => tangents = value; }
         public float Length { get => splineLength; }
+        public List<float> CumulativeLengthAtPoint { get => cumulativeLengthAtPoint; private set => cumulativeLengthAtPoint = value; }
 
         public SplineData()
         {
             points = new List<Vector3>();
             normals = new List<Vector3>();
             tangents = new List<Vector3>();
+            cumulativeLengthAtPoint = new List<float>();
         }
 
         /// <summary>
@@ -32,9 +35,11 @@ namespace Hadi.Splines
         public void CalculateLength()
         {
             splineLength = 0;
-            for(int i = 0; i < points.Count - 1; i++)
+            cumulativeLengthAtPoint.Add(0);
+            for (int i = 0; i < points.Count - 1; i++)
             {
                 splineLength += Vector3.Distance(points[i], points[i + 1]);
+                cumulativeLengthAtPoint.Add(splineLength);
             }
             //Debug.Log($"Spline length = {splineLength}");
         }
@@ -47,6 +52,7 @@ namespace Hadi.Splines
             points.Clear();
             tangents.Clear();
             normals.Clear();
+            cumulativeLengthAtPoint.Clear();
             splineLength = 0;
         }
     }
