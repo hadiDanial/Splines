@@ -55,6 +55,7 @@ namespace Hadi.Splines
         public bool DrawTangents { get => drawTangents; }
         public bool UseGameObjectPosition { get => useGameObjectPosition; }
         public SplineMode SplineMode { get => splineMode; private set => splineMode = value; }
+        public float Length { get => SplineData.Length; }
 
         private void Awake()
         {
@@ -207,7 +208,7 @@ namespace Hadi.Splines
                 CalculatePoint(P1, P2, factor0, factor1, factor2, factor3, t);
             }
             // t = 1
-            if(isClosingCurve)
+            if (isClosingCurve)
                 CalculatePoint(P1, P2, factor0, factor1, factor2, factor3, 1);
         }
 
@@ -336,11 +337,11 @@ namespace Hadi.Splines
         public SplineDataAtPoint GetDataAtPoint(float t)
         {
             SplineSegment segment = GetSplineSegment(t);
-            
+
             bool looped = closedSpline && segment.pointIndex >= splineData.Points.Count - 1;
             //print($"index: {segment.pointIndex} / {splineData.Points.Count}  looped={looped}");
             SplineDataAtPoint data = SplineUtility.GetDataAtSegment(SplineData, segment, looped);
-                
+
             return data;
         }
 
@@ -361,6 +362,7 @@ namespace Hadi.Splines
 
         private float CalculateEndOfSplineInstruction(float value, float maxValue = 1f)
         {
+            if (value < maxValue) value += maxValue;
             switch (EndOfSplineInstruction)
             {
                 case EndOfSplineInstruction.End:
@@ -379,27 +381,38 @@ namespace Hadi.Splines
             return value;
         }
 
-        internal SplineDataAtPoint GetDataAtDistance(float distance, int index = 0)
+        internal SplineDataAtPoint GetDataAtDistance(float distance, int index = 0, bool moveForwards = false)
         {
             float maxDistance = splineData.Length, initialDistance = distance;
-            float t = 0; 
+            float t = 0;
             int count = splineData.CumulativeLengthAtPoint.Count;
             bool found = false;
             distance = CalculateEndOfSplineInstruction(distance, maxDistance);
             int numSegments = splineData.Points.Count + (closedSpline ? 1 : 0);
             float percentPerSegment = 1f / numSegments;
-
-            for (int i = index; i < count - 1; i++)
+            if(distance == 0 || distance < splineData.CumulativeLengthAtPoint[0]) return GetDataAtPoint(0);         
+            int i = index;
+            while (!found)
             {
                 if (splineData.CumulativeLengthAtPoint[i] < distance && splineData.CumulativeLengthAtPoint[i + 1] > distance)
                 {
                     float currentDistance = splineData.CumulativeLengthAtPoint[i + 1] - splineData.CumulativeLengthAtPoint[i];
-                    float localT = ((distance - splineData.CumulativeLengthAtPoint[i]) / currentDistance ) ;
+                    float localT = ((distance - splineData.CumulativeLengthAtPoint[i]) / currentDistance);
                     t = ((float)i / count) + Mathf.Lerp(0, percentPerSegment, localT);
                     found = true;
                 }
                 if (found) i = count;
+                if (moveForwards)
+                    i = (i + 1) % (count - 1);
+                else
+                {
+
+                    i--;
+                    if (i == -1) i = count - 1;
+                }
             }
+
+
             return GetDataAtPoint(t);
         }
     }
