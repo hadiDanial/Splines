@@ -56,7 +56,7 @@ namespace Hadi.Splines.Editor
                 Handles.color = lineColor;
                 Handles.DrawLine(point.anchor + origin, point.controlPoint1 + origin, lineThickness);
                 Handles.DrawLine(point.anchor + origin, point.controlPoint2 + origin, lineThickness);
-                if (point.Update(anchor, control1, control2, rotation, origin))
+                if (point.Update(anchor, control1, control2, rotation, origin, spline.SplineMode))
                     spline.GenerateSpline();
             }
             SplineData data = spline.SplineData;

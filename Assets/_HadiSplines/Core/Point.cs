@@ -20,8 +20,8 @@ namespace Hadi.Splines
         public Point(Vector3 anchor, Vector3 controlPoint1)
         {
             this.anchor = anchor;
-            this.controlPoint2 = Vector3.zero;         
-            relativeControlPoint1 = controlPoint1;            
+            this.controlPoint2 = Vector3.zero;
+            relativeControlPoint1 = controlPoint1;
             this.controlPoint1 = anchor + relativeControlPoint1;
             this.controlPoint2 = Vector3.zero;
             this.relativeControlPoint2 = Vector3.zero;
@@ -57,8 +57,8 @@ namespace Hadi.Splines
         {
             this.anchor = anchor;
             controlPoint1Direction = controlPoint1Direction.normalized;
-            Vector3 vec1= controlPoint1Direction * controlPoint1Magnitude;
-            Vector3 vec2= controlPoint1Direction * -controlPoint2Magnitude;
+            Vector3 vec1 = controlPoint1Direction * controlPoint1Magnitude;
+            Vector3 vec2 = controlPoint1Direction * -controlPoint2Magnitude;
 
             relativeControlPoint1 = vec1;
             relativeControlPoint2 = vec2;
@@ -67,8 +67,41 @@ namespace Hadi.Splines
             this.mode = ControlMode.Aligned;
         }
 
-        public void Refresh()
+        public void Refresh(SplineMode splineMode)
         {
+            switch (splineMode)
+            {
+                case SplineMode.XY:
+                    {
+                        anchor = new Vector3(anchor.x, anchor.y);
+                        controlPoint1 = new Vector3(controlPoint1.x, controlPoint1.y);
+                        controlPoint2 = new Vector3(controlPoint2.x, controlPoint2.y);
+                        relativeControlPoint1 = new Vector3(relativeControlPoint1.x, relativeControlPoint1.y);
+                        relativeControlPoint2 = new Vector3(relativeControlPoint2.x, relativeControlPoint2.y);
+                        break;
+                    }
+                case SplineMode.XZ:
+                    {
+                        anchor = new Vector3(anchor.x, 0, anchor.z);
+                        controlPoint1 = new Vector3(controlPoint1.x, 0, controlPoint1.z);
+                        controlPoint2 = new Vector3(controlPoint2.x, 0, controlPoint2.z);
+                        relativeControlPoint1 = new Vector3(relativeControlPoint1.x, 0, relativeControlPoint1.z);
+                        relativeControlPoint2 = new Vector3(relativeControlPoint2.x, 0, relativeControlPoint2.z);
+                    }
+                    break;
+                case SplineMode.YZ:
+                    {
+                        anchor = new Vector3(0, anchor.y, anchor.z);
+                        controlPoint1 = new Vector3(0, controlPoint1.y, controlPoint1.z);
+                        controlPoint2 = new Vector3(0, controlPoint2.y, controlPoint2.z);
+                        relativeControlPoint1 = new Vector3(0, relativeControlPoint1.y, relativeControlPoint1.z);
+                        relativeControlPoint2 = new Vector3(0, relativeControlPoint2.y, relativeControlPoint2.z);
+                    }
+                    break;
+                case SplineMode.Full3D:
+                default:
+                    break;
+            }
             relativeControlPoint1 = controlPoint1 - anchor;
             relativeControlPoint2 = controlPoint2 - anchor;
             switch (mode)
@@ -96,32 +129,32 @@ namespace Hadi.Splines
             this.controlPoint2 = anchor - relativeControlPoint1;
         }
 
-        public bool Update(Vector3 anchor, Vector3 control1, Vector3 control2, Quaternion rotation, Vector3 origin)
+        public bool Update(Vector3 anchor, Vector3 control1, Vector3 control2, Quaternion rotation, Vector3 origin, SplineMode splineMode)
         {
             bool refresh = false;
             anchor -= origin;
             control1 -= origin;
             control2 -= origin;
-            if(!this.anchor.Equals(anchor))
+            if (!this.anchor.Equals(anchor))
             {
                 refresh = true;
                 this.anchor = anchor;
                 this.controlPoint1 = anchor + relativeControlPoint1;
                 this.controlPoint2 = anchor + relativeControlPoint2;
             }
-            else if(!this.controlPoint1.Equals(control1) || !this.controlPoint2.Equals(control2))
+            else if (!this.controlPoint1.Equals(control1) || !this.controlPoint2.Equals(control2))
             {
-                refresh = true;            
+                refresh = true;
                 this.controlPoint1 = control1;
                 this.controlPoint2 = control2;
             }
-            if(!this.rotation.Equals(rotation))
+            if (!this.rotation.Equals(rotation))
             {
                 refresh = true;
                 this.rotation = rotation;
             }
             if (refresh)
-                Refresh();
+                Refresh(splineMode);
             return refresh;
         }
     }

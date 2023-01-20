@@ -54,6 +54,7 @@ namespace Hadi.Splines
         public bool DrawNormals { get => drawNormals; }
         public bool DrawTangents { get => drawTangents; }
         public bool UseGameObjectPosition { get => useGameObjectPosition; }
+        public SplineMode SplineMode { get => splineMode; private set => splineMode = value; }
 
         private void Awake()
         {
@@ -259,7 +260,7 @@ namespace Hadi.Splines
             if (splinePointsList.Count == 0) return;
             foreach (Point point in splinePointsList)
             {
-                point.Refresh();
+                point.Refresh(SplineMode);
             }
             SplineData.useObjectTransform = useGameObjectPosition;
             SplineData.objectTransform = transform;
