@@ -21,7 +21,7 @@ namespace Hadi.Splines
             {
                 EditorGUILayout.BeginVertical();
                 splineMover.timeValueEasing = EditorGUILayout.CurveField("Easing Curve", splineMover.timeValueEasing);
-                splineMover.timePerLoop = EditorGUILayout.FloatField("Time", splineMover.timePerLoop);
+                splineMover.timePerLoop = Mathf.Max(0.1f, EditorGUILayout.FloatField("Time", splineMover.timePerLoop));
                 EditorGUILayout.EndVertical();
             }
             else if (splineMover.movementMode == SplineMovementMode.Distance)
