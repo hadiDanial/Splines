@@ -17,6 +17,8 @@ namespace Hadi.Splines.Editor
         Vector3 anchor, control1, control2;
         Quaternion rotation;
         Vector3 normal;
+        private int? pickedHandle;
+
         public override void OnInspectorGUI()
         {
             base.OnInspectorGUI();
@@ -36,31 +38,60 @@ namespace Hadi.Splines.Editor
             var spline = (target as Spline);
             EditorGUI.BeginChangeCheck();
             List<Point> points = spline.GetPoints();
-            Vector3 origin = spline.UseGameObjectPosition ? spline.transform.position : Vector3.zero;
-            foreach (Point point in points)
+            Vector3 origin = spline.GetOrigin();
+            Handles.color = anchorColor;
+            for (int i = 0; i < points.Count; i++)
             {
-                Handles.color = anchorColor;
-                Handles.SphereHandleCap(0, point.anchor + origin, Quaternion.identity, spline.ANCHOR_SIZE, EventType.Repaint);
-                anchor = Handles.PositionHandle(point.anchor + origin, Quaternion.identity);
+                if (Handles.Button(points[i].anchor, Quaternion.identity, spline.ANCHOR_SIZE, 0.2f, Handles.SphereHandleCap))
+                {
+                    pickedHandle = i;
+                }
+            }
+            if (pickedHandle.HasValue)
+            {
+                bool changed = false;
+                EditorGUI.BeginChangeCheck();
+                Point point = points[pickedHandle.Value];
+                Vector3 handlePos = point.anchor + origin;
+                anchor = Handles.PositionHandle(handlePos, Quaternion.identity);
+                rotation = Handles.RotationHandle(point.rotation, handlePos);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    changed = true;
+                    Undo.RecordObject(target, "Modified Anchor (Spline)");
+                }
+
+                EditorGUI.BeginChangeCheck();
+                handlePos = point.controlPoint1 + origin;
                 Handles.color = controlPointColor;
-                Handles.SphereHandleCap(0, point.controlPoint1 + origin, Quaternion.identity, spline.CONTROL_SIZE, EventType.Repaint);
-                control1 = Handles.PositionHandle(point.controlPoint1 + origin, Quaternion.identity);
+                Handles.SphereHandleCap(0, handlePos, Quaternion.identity, spline.CONTROL_SIZE, EventType.Repaint);
+                control1 = Handles.PositionHandle(handlePos, Quaternion.identity);
                 if (point.mode == ControlMode.Mirrored)
                     Handles.color = disabledColor;
                 else if (point.mode == ControlMode.Aligned)
                     Handles.color = alignedColor;
-                Handles.SphereHandleCap(0, point.controlPoint2 + origin, Quaternion.identity, spline.CONTROL_SIZE, EventType.Repaint);
-                if(point.mode != ControlMode.Mirrored)
-                    control2 = Handles.PositionHandle(point.controlPoint2 + origin, Quaternion.identity);
-                rotation = Handles.RotationHandle(point.rotation, point.anchor + origin);
+                handlePos = point.controlPoint2 + origin;
+                Handles.SphereHandleCap(0, handlePos, Quaternion.identity, spline.CONTROL_SIZE, EventType.Repaint);
+                if (point.mode != ControlMode.Mirrored)
+                    control2 = Handles.PositionHandle(handlePos, Quaternion.identity);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    changed = true;
+                    Undo.RecordObject(target, "Moved Control Point (Spline)");
+                }
+                
                 Handles.color = lineColor;
                 Handles.DrawLine(point.anchor + origin, point.controlPoint1 + origin, lineThickness);
                 Handles.DrawLine(point.anchor + origin, point.controlPoint2 + origin, lineThickness);
-                if (point.Update(anchor, control1, control2, rotation, origin, spline.SplineMode))
-                    spline.GenerateSpline();
+                if(changed)
+                {
+                    if (point.Update(anchor, control1, control2, rotation, origin, spline.SplineMode))
+                        spline.GenerateSpline();
+                }
             }
+
             SplineData data = spline.SplineData;
-            if(spline.DrawGizmos)
+            if (spline.DrawGizmos)
             {
                 Handles.color = Color.white;
                 for (int i = 0; i < data.Normals.Count; i++)
@@ -74,12 +105,6 @@ namespace Hadi.Splines.Editor
                     Vector3 p = data.Points[i] + origin;
                     Handles.DrawLine(p, p + data.Tangents[i] * 0.15f);
                 }
-            }
-            if (EditorGUI.EndChangeCheck())
-            {
-                Undo.RecordObject(target, "Move point");
-                //t.lookAtPoint = pos;
-                //t.Update();
             }
         }
     }
