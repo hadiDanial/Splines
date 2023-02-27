@@ -46,7 +46,6 @@ namespace Hadi.Splines
     { 
         LineRenderer,
         MeshRenderer,
-        QuadRenderer,
         None
     }
 

@@ -1,7 +1,5 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting.YamlDotNet.Core.Tokens;
 using UnityEngine;
 
 namespace Hadi.Splines
@@ -64,7 +62,7 @@ namespace Hadi.Splines
             SplineData.objectTransform = transform;
             SplineData.useObjectTransform = useGameObjectPosition;
             splineRenderer = GetComponent<ISplineRenderer>();
-            rendererType = splineRenderer.GetRendererType();
+            rendererType = (splineRenderer == null) ? SplineRendererType.None : splineRenderer.GetRendererType();
         }
 
         private void Start()
@@ -79,15 +77,29 @@ namespace Hadi.Splines
         public void AddPoint()
         {
             Point lastPoint = splinePointsList[splinePointsList.Count - 1];
-            Vector3 tangent;
+            Vector3 tangent, position;
             if (splineData.Tangents.Count > 1)
+            {
                 tangent = splineData.Tangents[splineData.Tangents.Count - 1].normalized;
+                position = splineData.Points[splineData.Points.Count - 1];
+            }
             else
+            {
                 tangent = Vector3.right;
-            Vector3 newPointPosition = lastPoint.anchor + tangent * 2;
+                position = lastPoint.anchor;
+            }
+            Vector3 newPointPosition = position + tangent * 2;
             splinePointsList.Add(new Point(newPointPosition, -tangent));
             GenerateSpline();
         }
+
+        public void AddPointAtIndex(int index)
+        {
+            // Get point position by interpolating between point at index, index+1
+            // Same for tangents, lerp, but give them half the magnitude
+            // Tangents of the original points should be halved as well?
+        }
+
         public void ResetSpline()
         {
             splinePointsList.Clear();
@@ -114,14 +126,14 @@ namespace Hadi.Splines
                 case SplineRendererType.MeshRenderer:
                     splineRenderer = GetNewRenderer<SplineMeshRenderer>();
                     break;
-                case SplineRendererType.QuadRenderer:
+                case SplineRendererType.None:
                     break;
                 default:
                     splineRenderer = GetNewRenderer<SplineLineRenderer>();
                     break;
             }
-            splineRenderer.Setup(material);
-            splineRenderer.SetData(splineData);
+            splineRenderer?.Setup(material);
+            splineRenderer?.SetData(splineData);
         }
         private ISplineRenderer GetNewRenderer<T>() where T : MonoBehaviour, ISplineRenderer
         {
@@ -138,20 +150,12 @@ namespace Hadi.Splines
         public virtual void GenerateSpline()
         {
             int pointsCount = splinePointsList.Count;
-            if (splineRenderer == null)
-            {
-                SetRendererType();
-                Debug.LogWarning("Cannot create a spline without a renderer! Renderer added automatically." + gameObject.name);
-                return;
-            }
             if (pointsCount < 2)
             {
                 Debug.LogError("Cannot create a spline without at least 2 points! " + gameObject.name);
                 return;
             }
             int pointsPerCurve = segmentsPerCurve * POINT_COUNT_PER_CURVE;
-            int numPositions = pointsCount * POINT_COUNT_PER_CURVE * (pointsPerCurve + 1);//points.Count * segmentsPerCurve;
-            //splineRenderer.SetPointCount(closedSpline ? numPositions + pointsPerCurve : numPositions);
 
             SplineData.Clear();
 
@@ -168,7 +172,7 @@ namespace Hadi.Splines
                 splineRenderer?.SetClosedSpline(false);
 
             SplineData.CalculateLength();
-            splineRenderer.SetData(SplineData);
+            splineRenderer?.SetData(SplineData);
         }
 
         /// <summary>
@@ -259,19 +263,23 @@ namespace Hadi.Splines
         {
             if (splinePointsList == null) return;
             if (splinePointsList.Count == 0) return;
+            if(splineRenderer == null) splineRenderer = GetComponent<ISplineRenderer>();
             foreach (Point point in splinePointsList)
             {
                 point.Refresh(SplineMode);
             }
             SplineData.useObjectTransform = useGameObjectPosition;
             SplineData.objectTransform = transform;
-            if (splineRenderer != null && rendererType != splineRenderer.GetRendererType())
+            if ((splineRenderer != null && rendererType != splineRenderer.GetRendererType()) || splineRenderer == null)
             {
 #if UNITY_EDITOR
                 UnityEditor.EditorApplication.delayCall += () =>
                 {
-                    splineRenderer?.Destroy();
-                    splineRenderer = null;
+                    if(splineRenderer != null)
+                    {
+                        splineRenderer?.Destroy();
+                        splineRenderer = null;
+                    }
                     SetRendererType();
 
                 };
@@ -414,6 +422,12 @@ namespace Hadi.Splines
 
 
             return GetDataAtPoint(t);
+        }
+
+        public Vector3 GetOrigin()
+        {
+            return UseGameObjectPosition ? transform.position : Vector3.zero;
+
         }
     }
 }
