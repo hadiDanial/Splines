@@ -21,9 +21,9 @@ namespace Hadi.Splines
         private SplineRendererType rendererType = SplineRendererType.LineRenderer;
         [SerializeField]
         private SplineData splineData;
-        [SerializeField]
-        private bool useGameObjectPosition = false;
-
+        [SerializeField, Tooltip("If true, the points will use the world space position, otherwise they will be affected by the Transform component.")]
+        private bool useWorldSpacePosition = false;
+        private bool prevUseWorldSpacePosition = false;
         [SerializeField]
         private Material material;
 
@@ -51,16 +51,17 @@ namespace Hadi.Splines
         public bool DrawGizmos { get => drawGizmos; }
         public bool DrawNormals { get => drawNormals; }
         public bool DrawTangents { get => drawTangents; }
-        public bool UseGameObjectPosition { get => useGameObjectPosition; }
+        public bool UseWorldSpace { get => useWorldSpacePosition; }
         public SplineMode SplineMode { get => splineMode; private set => splineMode = value; }
         public float Length { get => SplineData.Length; }
+        public bool IsClosedSpline { get => IsClosedSpline; }
 
         private void Awake()
         {
             //SetRendererType();
             SplineData = new SplineData();
             SplineData.objectTransform = transform;
-            SplineData.useObjectTransform = useGameObjectPosition;
+            SplineData.useWorldSpace = useWorldSpacePosition;
             splineRenderer = GetComponent<ISplineRenderer>();
             rendererType = (splineRenderer == null) ? SplineRendererType.None : splineRenderer.GetRendererType();
         }
@@ -201,9 +202,9 @@ namespace Hadi.Splines
 
             // By caching these, we reduce the amount of computations needed. Same result as DeCasteljau's, but more efficient.
             // See `The Continuity of Splines` by Freya Holmer, @6:10
-            Vector3 factor0 = P1.anchor, factor1 = -3 * P1.anchor + 3 * P1.controlPoint2;
-            Vector3 factor2 = 3 * P1.anchor - 6 * P1.controlPoint2 + 3 * P2.controlPoint1;
-            Vector3 factor3 = -P1.anchor + 3 * P1.controlPoint2 - 3 * P2.controlPoint1 + P2.anchor;
+            Vector3 factor0 = (P1.anchor), factor1 = -3 * (P1.anchor) + 3 * (P1.controlPoint2);
+            Vector3 factor2 = 3 * (P1.anchor) - 6 * (P1.controlPoint2) + 3 * (P2.controlPoint1);
+            Vector3 factor3 = -(P1.anchor) + 3 * (P1.controlPoint2) - 3 * (P2.controlPoint1) + (P2.anchor);
             int start = index * segmentsPerCurve * POINT_COUNT_PER_CURVE, end = start + totalSegments;
             for (int i = start; i < end; i++)
             {
@@ -232,6 +233,7 @@ namespace Hadi.Splines
             float t3 = t2 * t;
 
             Vector3 P = factor0 + t * factor1 + t2 * factor2 + t3 * factor3;
+            //P = transform.TransformSplinePoint(P, UseWorldSpace);
             SplineData.Points.Add(P);
             P = factor1 + 2 * t * factor2 + 3 * t2 * factor3;
             SplineData.Tangents.Add(P);
@@ -268,7 +270,7 @@ namespace Hadi.Splines
             {
                 point.Refresh(SplineMode);
             }
-            SplineData.useObjectTransform = useGameObjectPosition;
+            SplineData.useWorldSpace = useWorldSpacePosition;
             SplineData.objectTransform = transform;
             if ((splineRenderer != null && rendererType != splineRenderer.GetRendererType()) || splineRenderer == null)
             {
@@ -284,6 +286,11 @@ namespace Hadi.Splines
 
                 };
 #endif
+            }
+            if(prevUseWorldSpacePosition != useWorldSpacePosition)
+            {
+                prevUseWorldSpacePosition = useWorldSpacePosition;
+                SplineData.useWorldSpace = useWorldSpacePosition;
             }
             GenerateSpline();
         }
@@ -426,7 +433,7 @@ namespace Hadi.Splines
 
         public Vector3 GetOrigin()
         {
-            return UseGameObjectPosition ? transform.position : Vector3.zero;
+            return UseWorldSpace ? transform.position : Vector3.zero;
 
         }
     }
