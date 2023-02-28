@@ -32,5 +32,10 @@ namespace Hadi.Splines
             Vector3 velocity = LerpVelocity(SplineData, segment, looped);
             return new SplineDataAtPoint(LerpPosition(SplineData, segment, looped), LerpNormal(SplineData, segment, looped), velocity.normalized, velocity, segment.pointIndex);
         }
+
+        public static Vector3 TransformSplinePoint(this Transform transform, Vector3 point, bool useWorldSpace)
+        {
+            return useWorldSpace ? point : transform.TransformPoint(point);
+        }
     }
 }
