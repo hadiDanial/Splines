@@ -77,7 +77,7 @@ namespace Hadi.Splines
         public void SetData(SplineData splineData)
         {
             this.splineData = splineData;
-            origin = (splineData.useObjectTransform ? splineData.objectTransform.position : Vector3.zero);
+            origin = (splineData.useWorldSpace ? splineData.objectTransform.position : Vector3.zero);
             currentRadius = radius;
             currentVerticalResolution = verticalResolution;
             GenerateMesh();
@@ -105,17 +105,16 @@ namespace Hadi.Splines
             {
                 angle = 0;
                 t = (float)i / splineData.Points.Count;
-                //Vector3 cross = Vector3.Cross(splineData.Normals[i], splineData.Tangents[i]).normalized;
                 for (int j = 0; j < currentVerticalResolution; j++)
                 {
-                    //float x = Mathf.Cos(angle) * currentRadius, y = Mathf.Sin(angle) * currentRadius;
-                    Vector3 pos; //= Quaternion.Euler(new Vector3(0, y, x)) * cross;
+                    Vector3 pos;
                     Quaternion rot = Quaternion.AngleAxis(angle, splineData.Tangents[i]);
                     pos = (rot * splineData.Normals[i]).normalized;
                     if (useAnimationCurveForRadius)
                         pos *= radiusOverSpline.Evaluate(t) * currentRadius;
                     else pos *= currentRadius;
-                    vertices[i * currentVerticalResolution + j] = pos + splineData.Points[i] + origin;
+                    pos = pos + splineData.Points[i];
+                    vertices[i * currentVerticalResolution + j] = splineData.useWorldSpace ? pos : transform.TransformPoint(pos);
                     angle += (angleDelta);
                 }
             }
@@ -218,19 +217,24 @@ namespace Hadi.Splines
 
             for (int i = 0; i < vertices.Length; i++)
             {
-                Gizmos.DrawSphere(vertices[i], 0.01f);
+                Gizmos.DrawSphere(transform.TransformSplinePoint(vertices[i], splineData.useWorldSpace), 0.01f);
                 if (drawVertexIndices)
-                    Handles.Label(vertices[i] + Vector3.right * 0.05f, i + "", style);
+                    Handles.Label(transform.TransformSplinePoint(vertices[i], splineData.useWorldSpace) + Vector3.right * 0.05f, i + "", style);
             }
 
             Gizmos.color = Color.black;
             if (triangles != null)
+            {
                 for (int i = 0; i < triangles.Length; i += 3)
                 {
-                    Gizmos.DrawLine(vertices[triangles[i]], vertices[triangles[i + 1]]);
-                    Gizmos.DrawLine(vertices[triangles[i + 1]], vertices[triangles[i + 2]]);
-                    Gizmos.DrawLine(vertices[triangles[i]], vertices[triangles[i + 2]]);
+                    Gizmos.DrawLine(transform.TransformSplinePoint(vertices[triangles[i]], splineData.useWorldSpace),
+                                    transform.TransformSplinePoint(vertices[triangles[i + 1]], splineData.useWorldSpace));
+                    Gizmos.DrawLine(transform.TransformSplinePoint(vertices[triangles[i + 1]], splineData.useWorldSpace),
+                                    transform.TransformSplinePoint(vertices[triangles[i + 2]], splineData.useWorldSpace));
+                    Gizmos.DrawLine(transform.TransformSplinePoint(vertices[triangles[i]], splineData.useWorldSpace),
+                                    transform.TransformSplinePoint(vertices[triangles[i + 2]], splineData.useWorldSpace));
                 }
+            }
         }
     }
 
