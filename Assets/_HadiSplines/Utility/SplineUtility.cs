@@ -33,9 +33,14 @@ namespace Hadi.Splines
             return new SplineDataAtPoint(LerpPosition(SplineData, segment, looped), LerpNormal(SplineData, segment, looped), velocity.normalized, velocity, segment.pointIndex);
         }
 
-        public static Vector3 TransformSplinePoint(this Transform transform, Vector3 point, bool useWorldSpace)
+        public static Vector3 TransformSplinePoint(this Transform transform, Vector3 point, bool useObjectTransform)
         {
-            return useWorldSpace ? point : transform.TransformPoint(point);
+            return useObjectTransform ? transform.TransformPoint(point) : point;
+        }
+
+        public static Vector3 InverseTransformSplinePoint(this Transform transform, Vector3 point, bool useObjectTransform)
+        {
+            return useObjectTransform ? transform.InverseTransformPoint(point) : point;
         }
     }
 }
