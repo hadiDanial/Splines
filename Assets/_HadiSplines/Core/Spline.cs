@@ -249,13 +249,13 @@ namespace Hadi.Splines
             Vector3 factor3 = -P1anchor + 3 * P1controlPoint2 - 3 * P2controlPoint1 + P2anchor;
 
             int start = index * segmentsPerCurve * POINT_COUNT_PER_CURVE, end = start + totalSegments;
-            for (int i = start; i < end; i++)
+            for (int i = start; i < end - 1; i++)
             {
                 float t = ((float)i % totalSegments) / (end - start);
                 CalculatePoint(P1, P2, factor0, factor1, factor2, factor3, t);
             }
             // t = 1
-            //if (isClosingCurve)
+            if (isClosingCurve)
                 CalculatePoint(P1, P2, factor0, factor1, factor2, factor3, 1);
         }
 
@@ -482,6 +482,11 @@ namespace Hadi.Splines
             {                
                 GenerateSpline();
             }
+        }
+
+        public Vector3 GetPointTangent(int value)
+        {
+            return GetTangent(((float)value) / splinePointsList.Count);
         }
     }
 }
