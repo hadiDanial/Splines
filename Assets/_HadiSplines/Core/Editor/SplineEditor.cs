@@ -145,7 +145,7 @@ namespace Hadi.Splines.Editor
                
 
                 anchor = Handles.PositionHandle(handlePos, handleRotation);
-                rotation = Handles.RotationHandle(point.rotation, handlePos);
+                rotation = Handles.Disc(point.rotation, handlePos, spline.GetPointTangent(pickedHandle.Value), 0.5f, false, 1);//Handles.RotationHandle(point.rotation, handlePos);
                 if (EditorGUI.EndChangeCheck())
                 {
                     changed = true;
@@ -153,8 +153,8 @@ namespace Hadi.Splines.Editor
                     {
                         anchor = spline.transform.InverseTransformPoint(anchor);
                     }
+                    Undo.RecordObject(spline, "Modified Anchor (Spline)");
                     point.UpdateAnchor(anchor, rotation);
-                    Undo.RecordObject(target, "Modified Anchor (Spline)");
                 }
 
                 EditorGUI.BeginChangeCheck();
@@ -190,8 +190,8 @@ namespace Hadi.Splines.Editor
                         control1 = spline.transform.InverseTransformPoint(control1);
                         control2 = spline.transform.InverseTransformPoint(control2);
                     }
+                    Undo.RecordObject(spline, "Moved Control Point (Spline)");
                     point.UpdateControlPoints(control1, control2);
-                    Undo.RecordObject(target, "Moved Control Point (Spline)");
                 }
 
                 Handles.color = lineColor;
