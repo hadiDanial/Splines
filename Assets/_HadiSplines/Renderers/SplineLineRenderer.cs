@@ -33,10 +33,11 @@ namespace Hadi.Splines
         {
             this.splineData = splineData;
             int count = splineData.Points.Count;
+            lineRenderer.positionCount = 0;
             lineRenderer.positionCount = count;
             for (int i = 0; i < splineData.Points.Count; i++)
             {
-                lineRenderer.SetPosition(i, transform.TransformSplinePoint(splineData.Points[i], splineData.useWorldSpace));
+                lineRenderer.SetPosition(i, splineData.Points[i]);
             }
         }
         public void SetClosedSpline(bool closed)

@@ -28,15 +28,16 @@ namespace Hadi.Splines
         private Vector3[] vertices;
         [SerializeField]
         private Vector2[] uvs;
-        private bool isClosed;
-        Vector3 origin;
+
         [Header("DEBUG")]
         [SerializeField] private bool drawVertexIndices = false;
         private Material material;
 
         private float currentRadius;
         private int currentVerticalResolution;
+        private bool isClosed;
 
+        private const float defaultScaleMagnitude = 1.73205080757f; // Sqrt(3)
         private void Awake()
         {
             SetupMesh();
@@ -77,7 +78,6 @@ namespace Hadi.Splines
         public void SetData(SplineData splineData)
         {
             this.splineData = splineData;
-            origin = (splineData.useWorldSpace ? splineData.objectTransform.position : Vector3.zero);
             currentRadius = radius;
             currentVerticalResolution = verticalResolution;
             GenerateMesh();
@@ -101,6 +101,8 @@ namespace Hadi.Splines
             float angle;
             float angleDelta = 360f / currentVerticalResolution;
             float t;
+            float radiusValue = (splineData.useObjectTransform ? (currentRadius * defaultScaleMagnitude)/ splineData.objectTransform.localScale.magnitude : currentRadius);
+            bool useObjectSpace = splineData.useObjectTransform;
             for (int i = 0; i < splineData.Points.Count; i++)
             {
                 angle = 0;
@@ -111,10 +113,12 @@ namespace Hadi.Splines
                     Quaternion rot = Quaternion.AngleAxis(angle, splineData.Tangents[i]);
                     pos = (rot * splineData.Normals[i]).normalized;
                     if (useAnimationCurveForRadius)
+                    {
                         pos *= radiusOverSpline.Evaluate(t) * currentRadius;
+                    }
                     else pos *= currentRadius;
-                    pos = pos + splineData.Points[i];
-                    vertices[i * currentVerticalResolution + j] = splineData.useWorldSpace ? pos : transform.TransformPoint(pos);
+                    pos = transform.InverseTransformSplinePoint(pos + splineData.Points[i], useObjectSpace);
+                    vertices[i * currentVerticalResolution + j] = pos;
                     angle += (angleDelta);
                 }
             }
@@ -161,7 +165,8 @@ namespace Hadi.Splines
 
         public void Clear()
         {
-            mesh.Clear();
+            if(mesh != null)
+                mesh.Clear();
         }
 
         public void Destroy()
@@ -217,9 +222,9 @@ namespace Hadi.Splines
 
             for (int i = 0; i < vertices.Length; i++)
             {
-                Gizmos.DrawSphere(transform.TransformSplinePoint(vertices[i], splineData.useWorldSpace), 0.01f);
+                Gizmos.DrawSphere(transform.TransformSplinePoint(vertices[i], splineData.useObjectTransform), 0.01f);
                 if (drawVertexIndices)
-                    Handles.Label(transform.TransformSplinePoint(vertices[i], splineData.useWorldSpace) + Vector3.right * 0.05f, i + "", style);
+                    Handles.Label(transform.TransformSplinePoint(vertices[i], splineData.useObjectTransform) + Vector3.right * 0.05f, i + "", style);
             }
 
             Gizmos.color = Color.black;
@@ -227,12 +232,12 @@ namespace Hadi.Splines
             {
                 for (int i = 0; i < triangles.Length; i += 3)
                 {
-                    Gizmos.DrawLine(transform.TransformSplinePoint(vertices[triangles[i]], splineData.useWorldSpace),
-                                    transform.TransformSplinePoint(vertices[triangles[i + 1]], splineData.useWorldSpace));
-                    Gizmos.DrawLine(transform.TransformSplinePoint(vertices[triangles[i + 1]], splineData.useWorldSpace),
-                                    transform.TransformSplinePoint(vertices[triangles[i + 2]], splineData.useWorldSpace));
-                    Gizmos.DrawLine(transform.TransformSplinePoint(vertices[triangles[i]], splineData.useWorldSpace),
-                                    transform.TransformSplinePoint(vertices[triangles[i + 2]], splineData.useWorldSpace));
+                    Gizmos.DrawLine(transform.TransformSplinePoint(vertices[triangles[i]], splineData.useObjectTransform),
+                                    transform.TransformSplinePoint(vertices[triangles[i + 1]], splineData.useObjectTransform));
+                    Gizmos.DrawLine(transform.TransformSplinePoint(vertices[triangles[i + 1]], splineData.useObjectTransform),
+                                    transform.TransformSplinePoint(vertices[triangles[i + 2]], splineData.useObjectTransform));
+                    Gizmos.DrawLine(transform.TransformSplinePoint(vertices[triangles[i]], splineData.useObjectTransform),
+                                    transform.TransformSplinePoint(vertices[triangles[i + 2]], splineData.useObjectTransform));
                 }
             }
         }
