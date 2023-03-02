@@ -21,9 +21,9 @@ namespace Hadi.Splines
         private SplineRendererType rendererType = SplineRendererType.LineRenderer;
         [SerializeField]
         private SplineData splineData;
-        [SerializeField, Tooltip("If true, the points will use the world space position, otherwise they will be affected by the Transform component.")]
-        private bool useWorldSpacePosition = false;
-        private bool prevUseWorldSpacePosition = false;
+        [SerializeField, Tooltip("If true, the spline will be affected by the Transform component.")]
+        private bool useObjectTransform = false;
+        private bool prevUseObjectTransform = false;
         [SerializeField]
         private Material material;
 
@@ -38,12 +38,24 @@ namespace Hadi.Splines
         private float controlSize = 0.2f;
         [Range(0.01F, 0.5F), SerializeField]
         private float anchorSize = 0.15f;
-        [SerializeField] private bool resetSplineOnPlay = false;
+        [SerializeField, Tooltip("Should the spline be reset when entering play mode?")] 
+        private bool resetSplineOnPlay = false;
+        [SerializeField, Tooltip("Should the transform be reset when the spline is reset?")] 
+        private bool resetTransformOnSplineReset = false;
+
+        private Vector3 previousPosition;
+        private Quaternion previousRotation;
+        private Vector3 previousLocalScale;
 
         /// <summary>
         /// Number of points per curve (two anchors, and a control point for each anchor).
         /// </summary>
         private const int POINT_COUNT_PER_CURVE = 4;
+
+        /// <summary>
+        /// Distance between the last point and a newly added point.
+        /// </summary>
+        private const float NEW_POINT_DISTANCE = 2.5f;
 
         public float ANCHOR_SIZE { get => anchorSize; }
         public float CONTROL_SIZE { get => controlSize; }
@@ -51,7 +63,7 @@ namespace Hadi.Splines
         public bool DrawGizmos { get => drawGizmos; }
         public bool DrawNormals { get => drawNormals; }
         public bool DrawTangents { get => drawTangents; }
-        public bool UseWorldSpace { get => useWorldSpacePosition; }
+        public bool UseObjectTransform { get => useObjectTransform; }
         public SplineMode SplineMode { get => splineMode; private set => splineMode = value; }
         public float Length { get => SplineData.Length; }
         public bool IsClosedSpline { get => IsClosedSpline; }
@@ -61,7 +73,7 @@ namespace Hadi.Splines
             //SetRendererType();
             SplineData = new SplineData();
             SplineData.objectTransform = transform;
-            SplineData.useWorldSpace = useWorldSpacePosition;
+            SplineData.useObjectTransform = useObjectTransform;
             splineRenderer = GetComponent<ISplineRenderer>();
             rendererType = (splineRenderer == null) ? SplineRendererType.None : splineRenderer.GetRendererType();
         }
@@ -74,22 +86,30 @@ namespace Hadi.Splines
                 GenerateSpline();
         }
 
+        [ExecuteInEditMode]
+        private void Update()
+        {
+#if UNITY_EDITOR
+            CheckTransformChanged();
+#endif
+        }
+
         [ContextMenu("Add Point")]
         public void AddPoint()
         {
-            Point lastPoint = splinePointsList[splinePointsList.Count - 1];
             Vector3 tangent, position;
-            if (splineData.Tangents.Count > 1)
+            if (splinePointsList.Count > 1)
             {
-                tangent = splineData.Tangents[splineData.Tangents.Count - 1].normalized;
-                position = splineData.Points[splineData.Points.Count - 1];
+                Point lastPoint = splinePointsList[splinePointsList.Count - 1];
+                tangent = lastPoint.relativeControlPoint2.normalized;
+                position = lastPoint.anchor;
             }
             else
             {
                 tangent = Vector3.right;
-                position = lastPoint.anchor;
+                position = Vector3.zero;
             }
-            Vector3 newPointPosition = position + tangent * 2;
+            Vector3 newPointPosition = transform.InverseTransformSplinePoint( position + tangent * NEW_POINT_DISTANCE, UseObjectTransform);
             splinePointsList.Add(new Point(newPointPosition, -tangent));
             GenerateSpline();
         }
@@ -111,7 +131,14 @@ namespace Hadi.Splines
             splinePointsList.Add(p2);
             if (closedSpline)
             {
-                splinePointsList.Add(new Point(Vector3.down, Vector3.right * 0.5f));
+                Point p3 = new Point(Vector3.down, Vector3.right);
+                p3.rotation = Quaternion.Euler(180, 0, 0);
+                splinePointsList.Add(p3);
+            }
+            if(resetTransformOnSplineReset)
+            {
+                transform.SetPositionAndRotation(Vector2.zero, Quaternion.identity);
+                transform.localScale = Vector3.one;
             }
             GenerateSpline();
         }
@@ -156,10 +183,10 @@ namespace Hadi.Splines
                 Debug.LogError("Cannot create a spline without at least 2 points! " + gameObject.name);
                 return;
             }
-            int pointsPerCurve = segmentsPerCurve * POINT_COUNT_PER_CURVE;
+            SavePreviousTransform();
 
             SplineData.Clear();
-
+            splineRenderer?.Clear();
             for (int i = 0; i < pointsCount - 1; i++)
             {
                 CalculateCurve(splinePointsList[i], splinePointsList[i + 1], i);
@@ -174,6 +201,13 @@ namespace Hadi.Splines
 
             SplineData.CalculateLength();
             splineRenderer?.SetData(SplineData);
+        }
+
+        private void SavePreviousTransform()
+        {
+            previousPosition = transform.position;
+            previousRotation = transform.rotation;
+            previousLocalScale = transform.localScale;
         }
 
         /// <summary>
@@ -202,18 +236,26 @@ namespace Hadi.Splines
 
             // By caching these, we reduce the amount of computations needed. Same result as DeCasteljau's, but more efficient.
             // See `The Continuity of Splines` by Freya Holmer, @6:10
-            Vector3 factor0 = (P1.anchor), factor1 = -3 * (P1.anchor) + 3 * (P1.controlPoint2);
-            Vector3 factor2 = 3 * (P1.anchor) - 6 * (P1.controlPoint2) + 3 * (P2.controlPoint1);
-            Vector3 factor3 = -(P1.anchor) + 3 * (P1.controlPoint2) - 3 * (P2.controlPoint1) + (P2.anchor);
+            Vector3 P1anchor = transform.TransformSplinePoint(P1.anchor, UseObjectTransform),
+                    P1controlPoint1 = transform.TransformSplinePoint(P1.GetControlPoint1(), UseObjectTransform), 
+                    P1controlPoint2 = transform.TransformSplinePoint(P1.GetControlPoint2(), UseObjectTransform);
+            Vector3 P2anchor = transform.TransformSplinePoint(P2.anchor, UseObjectTransform),
+                    P2controlPoint1 = transform.TransformSplinePoint(P2.GetControlPoint1(), UseObjectTransform), 
+                    P2controlPoint2 = transform.TransformSplinePoint(P1.GetControlPoint2(), UseObjectTransform);
+
+            Vector3 factor0 = P1anchor;
+            Vector3 factor1 = -3 * P1anchor + 3 * P1controlPoint2;
+            Vector3 factor2 = 3 * P1anchor - 6 * P1controlPoint2 + 3 *P2controlPoint1;
+            Vector3 factor3 = -P1anchor + 3 * P1controlPoint2 - 3 * P2controlPoint1 + P2anchor;
+
             int start = index * segmentsPerCurve * POINT_COUNT_PER_CURVE, end = start + totalSegments;
             for (int i = start; i < end; i++)
             {
                 float t = ((float)i % totalSegments) / (end - start);
-                //print("t=" + t + ", start=" + start + ", end=" + end);
                 CalculatePoint(P1, P2, factor0, factor1, factor2, factor3, t);
             }
             // t = 1
-            if (isClosingCurve)
+            //if (isClosingCurve)
                 CalculatePoint(P1, P2, factor0, factor1, factor2, factor3, 1);
         }
 
@@ -270,8 +312,6 @@ namespace Hadi.Splines
             {
                 point.Refresh(SplineMode);
             }
-            SplineData.useWorldSpace = useWorldSpacePosition;
-            SplineData.objectTransform = transform;
             if ((splineRenderer != null && rendererType != splineRenderer.GetRendererType()) || splineRenderer == null)
             {
 #if UNITY_EDITOR
@@ -287,10 +327,10 @@ namespace Hadi.Splines
                 };
 #endif
             }
-            if(prevUseWorldSpacePosition != useWorldSpacePosition)
+            if(prevUseObjectTransform != useObjectTransform)
             {
-                prevUseWorldSpacePosition = useWorldSpacePosition;
-                SplineData.useWorldSpace = useWorldSpacePosition;
+                prevUseObjectTransform = useObjectTransform;
+                SplineData.useObjectTransform = useObjectTransform;
             }
             GenerateSpline();
         }
@@ -431,10 +471,17 @@ namespace Hadi.Splines
             return GetDataAtPoint(t);
         }
 
-        public Vector3 GetOrigin()
+        private void OnDrawGizmos()
         {
-            return UseWorldSpace ? transform.position : Vector3.zero;
+            CheckTransformChanged();
+        }
 
+        private void CheckTransformChanged()
+        {
+            if (transform.position != previousPosition || transform.rotation != previousRotation || transform.localScale != previousLocalScale)
+            {                
+                GenerateSpline();
+            }
         }
     }
 }

@@ -14,7 +14,7 @@ namespace Hadi.Splines
         [SerializeField] private List<float> cumulativeLengthAtPoint;
         private float splineLength;
         public Transform objectTransform;
-        public bool useWorldSpace;
+        public bool useObjectTransform;
         public List<Vector3> Points { get => points; private set => points = value; }
         public List<Vector3> Normals { get => normals; private set => normals = value; }
         public List<Vector3> Tangents { get => tangents; private set => tangents = value; }
