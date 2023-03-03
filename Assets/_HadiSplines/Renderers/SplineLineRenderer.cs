@@ -14,10 +14,10 @@ namespace Hadi.Splines
             InitializeLineRenderer();            
         }
 
-        public void Setup(Material material)
+        public void Setup(RendererSettings settings)
         {
             InitializeLineRenderer();
-            lineRenderer.material = material;
+            lineRenderer.material = settings.Material;
         }
 
         private void InitializeLineRenderer()

@@ -9,7 +9,7 @@ namespace Hadi.Splines
         /// Sets the spline renderer up.
         /// </summary>
         /// <param name="material">The material that the renderer should use.</param>
-        public void Setup(Material material);
+        public void Setup(RendererSettings settings);
 
         /// <summary>
         /// Sets the spline data that the renderer will use to render the spline.

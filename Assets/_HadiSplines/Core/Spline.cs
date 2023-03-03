@@ -23,7 +23,7 @@ namespace Hadi.Splines
         [Header("Renderer") ,SerializeField]
         private SplineRendererType rendererType = SplineRendererType.LineRenderer;
         [SerializeField]
-        private Material material;
+        private RendererSettings settings;
 
 
         [Header("DEBUG")]
@@ -162,7 +162,7 @@ namespace Hadi.Splines
                     splineRenderer = GetNewRenderer<SplineLineRenderer>();
                     break;
             }
-            splineRenderer?.Setup(material);
+            splineRenderer?.Setup(settings);
             splineRenderer?.SetData(splineData);
         }
         private ISplineRenderer GetNewRenderer<T>() where T : MonoBehaviour, ISplineRenderer
