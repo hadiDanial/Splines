@@ -1,7 +1,10 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Hadi.Splines
 {
@@ -16,8 +19,10 @@ namespace Hadi.Splines
         private bool useAnimationCurveForRadius = true;
         [SerializeField]
         private AnimationCurve radiusOverSpline = AnimationCurve.Constant(0, 1, 1);
-
-
+        [SerializeField]
+        private bool capSides = true;
+        [SerializeField]
+        private UVGenerationType UVGenerationType = UVGenerationType.Segment;
         private Mesh mesh;
         private MeshFilter meshFilter;
         private MeshRenderer meshRenderer;
@@ -31,12 +36,13 @@ namespace Hadi.Splines
 
         [Header("DEBUG")]
         [SerializeField] private bool drawVertexIndices = false;
+        [SerializeField] private bool drawGizmos;
         private Material material;
 
         private float currentRadius;
         private int currentVerticalResolution;
         private bool isClosed;
-
+        private object previousRadiusOverSpline;
         private const float defaultScaleMagnitude = 1.73205080757f; // Sqrt(3)
         private void Awake()
         {
@@ -68,10 +74,12 @@ namespace Hadi.Splines
             if (mesh == null)
                 SetupMesh();
             mesh.Clear();
-            mesh.uv = uvs;
             mesh.vertices = vertices;
             mesh.triangles = triangles;
+            mesh.uv = uvs;
             mesh.RecalculateNormals();
+            mesh.RecalculateTangents();
+            mesh.RecalculateUVDistributionMetrics();
             meshFilter.mesh = mesh;
         }
 
@@ -87,12 +95,49 @@ namespace Hadi.Splines
         {
             int numPoints = splineData.Points.Count * currentVerticalResolution;
             GenerateVertices(numPoints);
-            if (!onlyGenerateVertices)
-            {
-                GenerateTriangles(numPoints);
-
-            }
+            GenerateTriangles(numPoints - currentVerticalResolution);
+            GenerateUVs();
+            
             InitializeMesh();
+        }
+
+        private void GenerateUVs()
+        {
+            uvs = new Vector2[vertices.Length];
+            for (int j = 0; j < currentVerticalResolution; j++)
+            {
+                float verticalT = ((float)j / (currentVerticalResolution - 1));
+                for (int i = 0; i < splineData.Points.Count; i++)
+                {
+                    float horizontalT, t = ((float)i / (splineData.Points.Count - 1)); ;
+                    switch (UVGenerationType)
+                    {
+                        case UVGenerationType.Mesh:
+                            {
+                                horizontalT = t;
+                                break;
+                            }
+                        case UVGenerationType.Segment:
+                            {                                
+                                float initT = t * splineData.Points.Count;
+                                int segmentIndex = Mathf.FloorToInt(initT);
+                                float nextT = (segmentIndex + 1f) / splineData.Points.Count;
+                                horizontalT = (t - initT) / (nextT - initT);
+                                break;
+                            }
+                        case UVGenerationType.Length:
+                            {
+                                horizontalT = t;
+                                break;
+                            }
+                        default:
+                            horizontalT = t;
+                            break;
+                    }
+                    uvs[i * currentVerticalResolution + j] = new Vector2(horizontalT, verticalT);
+                }
+            }
+        
         }
 
         private void GenerateVertices(int numPoints)
@@ -105,18 +150,29 @@ namespace Hadi.Splines
             bool useObjectSpace = splineData.useObjectTransform;
             for (int i = 0; i < splineData.Points.Count; i++)
             {
+                bool noRadius = false;
+                if(capSides && (i == 0 || i == splineData.Points.Count - 1))
+                {
+                    noRadius = true;
+                }
                 angle = 0;
                 t = (float)i / splineData.Points.Count;
                 for (int j = 0; j < currentVerticalResolution; j++)
                 {
                     Vector3 pos;
                     Quaternion rot = Quaternion.AngleAxis(angle, splineData.Tangents[i]);
-                    pos = (rot * splineData.Normals[i]).normalized;
-                    if (useAnimationCurveForRadius)
+                    if (noRadius)
+                        pos = Vector3.zero;
+                    else
                     {
-                        pos *= radiusOverSpline.Evaluate(t) * currentRadius;
+
+                        pos = (rot * splineData.Normals[i]).normalized;
+                        if (useAnimationCurveForRadius)
+                        {
+                            pos *= radiusOverSpline.Evaluate(t) * currentRadius;
+                        }
+                        else pos *= currentRadius;
                     }
-                    else pos *= currentRadius;
                     pos = transform.InverseTransformSplinePoint(pos + splineData.Points[i], useObjectSpace);
                     vertices[i * currentVerticalResolution + j] = pos;
                     angle += (angleDelta);
@@ -126,7 +182,7 @@ namespace Hadi.Splines
 
         private void GenerateTriangles(int numPoints)
         {
-            triangles = new int[(numPoints - 1) * 6];
+            triangles = new int[numPoints * 6];
             for (int i = 0, triangleIndex = 0; i < splineData.Points.Count - 1; i++)
             {
                 int vertexIndex, startIndex;
@@ -189,31 +245,32 @@ namespace Hadi.Splines
 
         private void OnValidate()
         {
+            if (!radiusOverSpline.Equals(previousRadiusOverSpline))
+            {
+                previousRadiusOverSpline = radiusOverSpline;
+            }
             if (currentRadius != radius)
             {
                 currentRadius = radius;
-#if UNITY_EDITOR
-                UnityEditor.EditorApplication.delayCall += () =>
-                {
-                    GenerateMesh();
-                };
-#endif
             }
-            else if (currentVerticalResolution != verticalResolution)
+            if (currentVerticalResolution != verticalResolution)
             {
                 currentVerticalResolution = verticalResolution;
-#if UNITY_EDITOR
-                UnityEditor.EditorApplication.delayCall += () =>
-                {
-                    GenerateMesh();
-                };
-#endif
+
             }
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.delayCall += () =>
+            {
+                Clear();
+                GenerateMesh();
+            };
+#endif
         }
 
         private void OnDrawGizmos()
         {
             if (vertices == null || vertices.Length == 0) return;
+            if (!drawGizmos) return;
             Gizmos.color = Color.red;
             GUIStyle style = new GUIStyle();
             style.fontSize = 20;
