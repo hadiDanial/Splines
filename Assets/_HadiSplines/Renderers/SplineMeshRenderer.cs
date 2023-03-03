@@ -11,6 +11,7 @@ namespace Hadi.Splines
     {
         [Header("Spline Mesh Renderer")]
         [SerializeField, Range(3, 30)]
+        // TODO: Move curves, resolution to settings
         protected int meshResolution = 10;
         [SerializeField]
         protected bool useAnimationCurve = true;
