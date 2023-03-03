@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using UnityEngine;
 
 namespace Hadi.Splines
@@ -18,12 +19,11 @@ namespace Hadi.Splines
         [SerializeField, Range(2, 25), Tooltip("How many segments there are between any two points. This decides the resolution of the spline.")]
         protected int segmentsPerCurve = 10;
         [SerializeField, Tooltip("List of all points in the spline.")]
-        protected List<Point> splinePointsList;
+        protected List<Point> splinePointsList = new List<Point>();
         
-        [Header("Renderer") ,SerializeField]
-        private SplineRendererType rendererType = SplineRendererType.LineRenderer;
-        [SerializeField]
-        private RendererSettings settings;
+        [Header("Renderer") ,SerializeField]        
+        private RendererSettings rendererSettings;
+        private SplineRendererType rendererType;
 
 
         [Header("DEBUG")]
@@ -47,6 +47,7 @@ namespace Hadi.Splines
         private Quaternion previousRotation;
         private Vector3 previousLocalScale;
         private ISplineRenderer splineRenderer;
+        private RendererSettings currentSettings;
 
         /// <summary>
         /// Number of points per curve (two anchors, and a control point for each anchor).
@@ -148,29 +149,10 @@ namespace Hadi.Splines
         [ContextMenu("Setup Renderer")]
         protected void SetRendererType()
         {
-            switch (rendererType)
-            {
-                case SplineRendererType.LineRenderer:
-                    splineRenderer = GetNewRenderer<SplineLineRenderer>();
-                    break;
-                case SplineRendererType.MeshRenderer:
-                    splineRenderer = GetNewRenderer<SplineMeshRenderer>();
-                    break;
-                case SplineRendererType.None:
-                    break;
-                default:
-                    splineRenderer = GetNewRenderer<SplineLineRenderer>();
-                    break;
-            }
-            splineRenderer?.Setup(settings);
-            splineRenderer?.SetData(splineData);
-        }
-        private ISplineRenderer GetNewRenderer<T>() where T : MonoBehaviour, ISplineRenderer
-        {
-            ISplineRenderer renderer = GetComponent<T>();
-            if (renderer == null)
-                renderer = gameObject.AddComponent<T>();
-            return renderer;
+            if (rendererSettings == null)
+                Debug.LogWarning($"No settings for spline renderer @{gameObject.name}!");
+            else
+                splineRenderer = RendererSettings.GetRenderer(rendererSettings, gameObject, splineData);
         }
 
         /// <summary>
@@ -188,6 +170,7 @@ namespace Hadi.Splines
             SavePreviousTransform();
 
             SplineData.Clear();
+            SplineData.settings = currentSettings;
             splineRenderer?.Clear();
             for (int i = 0; i < pointsCount - 1; i++)
             {
@@ -203,7 +186,8 @@ namespace Hadi.Splines
 
             SplineData.CalculateLength();
             SplineData.numPoints = pointsCount;
-            splineRenderer?.SetData(SplineData);
+            if(splineRenderer != null)
+                splineRenderer?.SetData(SplineData);
         }
 
         private void SavePreviousTransform()
@@ -311,39 +295,6 @@ namespace Hadi.Splines
             return Vector3.Lerp(d, e, t);
         }
 
-        protected void OnValidate()
-        {
-            if (splinePointsList == null) return;
-            if (splinePointsList.Count == 0) return;
-            if(splineRenderer == null) splineRenderer = GetComponent<ISplineRenderer>();
-            foreach (Point point in splinePointsList)
-            {
-                point.Refresh(SplineMode);
-            }
-            if ((splineRenderer != null && rendererType != splineRenderer.GetRendererType()) || splineRenderer == null)
-            {
-#if UNITY_EDITOR
-                UnityEditor.EditorApplication.delayCall += () =>
-                {
-                    if(splineRenderer != null)
-                    {
-                        splineRenderer?.Destroy();
-                        splineRenderer = null;
-                    }
-                    SetRendererType();
-
-                };
-#endif
-            }
-            if(prevUseObjectTransform != useObjectTransform)
-            {
-                prevUseObjectTransform = useObjectTransform;
-                SplineData.useObjectTransform = useObjectTransform;
-            }
-#if UNITY_EDITOR
-            GenerateSpline();
-#endif
-        }
 
         public List<Point> GetPoints()
         {
@@ -483,6 +434,7 @@ namespace Hadi.Splines
 
         private void OnDrawGizmos()
         {
+            if (splinePointsList.Count == 0) ResetSpline();
             CheckTransformChanged();
         }
 
@@ -497,6 +449,66 @@ namespace Hadi.Splines
         public Vector3 GetPointTangent(int value)
         {
             return GetTangent(((float)value) / splinePointsList.Count);
+        }
+
+        public void ResetPointRotations()
+        {
+            SetPointRotations(Quaternion.identity);
+        }
+        public void SetPointRotations(Quaternion rotation)
+        {
+            foreach (Point point in splinePointsList)
+            {
+                point.rotation = rotation;
+            }
+            GenerateSpline();
+        }
+
+        public void Refresh()
+        {
+            splineData.settings = rendererSettings;
+            SetRendererType();
+            GenerateSpline();
+        }
+        protected void OnValidate()
+        {
+            if (splinePointsList == null) return;
+            if (splinePointsList.Count == 0) return;
+            if (splineRenderer == null) splineRenderer = GetComponent<ISplineRenderer>();
+            foreach (Point point in splinePointsList)
+            {
+                point.Refresh(SplineMode);
+            }
+            bool generate = true;
+            if (currentSettings != rendererSettings || splineRenderer == null)
+            {
+                currentSettings = rendererSettings;
+                generate = false;
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.delayCall += () =>
+                {
+                    if (splineRenderer != null && rendererSettings != null && rendererSettings.RendererType != rendererType)
+                    {
+                        splineRenderer?.Destroy();
+                        splineRenderer = null;
+                    }
+                    if (currentSettings != null)
+                    {
+                        Refresh();
+                    }
+
+                };
+#endif
+            }
+            if (prevUseObjectTransform != useObjectTransform)
+            {
+                prevUseObjectTransform = useObjectTransform;
+                SplineData.useObjectTransform = useObjectTransform;
+            }
+#if UNITY_EDITOR
+            if(generate)
+                GenerateSpline();
+#endif
         }
     }
 }
