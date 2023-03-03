@@ -2,58 +2,68 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
-using UnityEditor.Build;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace Hadi.Splines
 {
     [ExecuteInEditMode]
-    public class SplineMeshRenderer : MonoBehaviour, ISplineRenderer
+    public abstract class SplineMeshRenderer : MonoBehaviour, ISplineRenderer
     {
-        [SerializeField, Range(3, 50)]
-        private int verticalResolution = 10;
-        [SerializeField, Range(0.01f, 3f)]
-        private float radius = 0.25f;
+        [Header("Spline Mesh Renderer")]
+        [SerializeField, Range(3, 30)]
+        protected int meshResolution = 10;
         [SerializeField]
-        private bool useAnimationCurveForRadius = true;
+        protected bool useAnimationCurve = true;
         [SerializeField]
-        private AnimationCurve radiusOverSpline = AnimationCurve.Constant(0, 1, 1);
+        protected AnimationCurve widthOverSplineAnimationCurve = AnimationCurve.Constant(0, 1, 1);
         [SerializeField]
-        private bool capSides = true;
+        protected AnimationCurve heightOverSplineAnimationCurve = AnimationCurve.Constant(0, 1, 1);
         [SerializeField]
-        private UVGenerationType UVGenerationType = UVGenerationType.Segment;
-        private Mesh mesh;
-        private MeshFilter meshFilter;
-        private MeshRenderer meshRenderer;
-        private SplineData splineData;
+        protected bool capSides = true;
+
+        protected SplineData splineData;
         [SerializeField]
-        private int[] triangles;
+        protected int[] triangles;
         [SerializeField]
-        private Vector3[] vertices;
+        protected Vector3[] vertices;
         [SerializeField]
-        private Vector2[] uvs;
+        protected Vector2[] uvs;
 
         [Header("DEBUG")]
         [SerializeField] private bool drawVertexIndices = false;
         [SerializeField] private bool drawGizmos;
-        private Material material;
+        protected RendererSettings rendererSettings;
 
-        private float currentRadius;
-        private int currentVerticalResolution;
-        private bool isClosed;
-        private object previousRadiusOverSpline;
-        private const float defaultScaleMagnitude = 1.73205080757f; // Sqrt(3)
+        protected bool isClosed;
+        protected int currentMeshResolution;
+
+        protected Mesh mesh;
+        protected MeshFilter meshFilter;
+        protected MeshRenderer meshRenderer;
+        protected AnimationCurve previousWidthOverSpline, previousHeightOverSpline;
+
+        protected const float defaultScaleMagnitude = 1.73205080757f; // Sqrt(3)
         private void Awake()
         {
             SetupMesh();
             InitializeMesh();
         }
 
+        public void Setup()
+        {
+            InitializeMesh();            
+        }
+
+        protected abstract void SetSettings(RendererSettings settings);
+
+
+        /// <summary>
+        /// Setup the mesh - Add/Get MeshFilter and MeshRenderer components, and setup a new mesh.
+        /// </summary>
         private void SetupMesh()
         {
             mesh = new Mesh();
-            mesh.name = "Spline";
+            mesh.name = GetDefaultName();
             meshRenderer = GetComponent<MeshRenderer>();
             meshFilter = GetComponent<MeshFilter>();
             if (meshRenderer == null)
@@ -62,14 +72,10 @@ namespace Hadi.Splines
                 meshFilter = gameObject.AddComponent<MeshFilter>();
         }
 
-        public void Setup(RendererSettings settings)
-        {
-            this.material = settings?.Material;
-            InitializeMesh();
-            meshRenderer.sharedMaterial = material;
-        }
-
-        private void InitializeMesh()
+        /// <summary>
+        /// Initialize the mesh with the generated vertices, triangles and UVs.
+        /// </summary>
+        protected virtual void InitializeMesh()
         {
             if (mesh == null)
                 SetupMesh();
@@ -81,138 +87,74 @@ namespace Hadi.Splines
             mesh.RecalculateTangents();
             mesh.RecalculateUVDistributionMetrics();
 #if UNITY_EDITOR
-            UnityEditor.EditorApplication.delayCall += () => { meshFilter.mesh = mesh; };
+            UnityEditor.EditorApplication.delayCall += () => { if(meshFilter != null) meshFilter.mesh = mesh; };
 #else
             meshFilter.mesh = mesh;
 #endif
             }
 
-        public void SetData(SplineData splineData)
+        public virtual void SetData(SplineData splineData)
         {
+            currentMeshResolution = meshResolution;
             this.splineData = splineData;
-            currentRadius = radius;
-            currentVerticalResolution = verticalResolution;
+            rendererSettings = splineData.settings;
+            SetSettings(splineData.settings);
+            if (meshRenderer != null)
+                meshRenderer.sharedMaterial = rendererSettings?.Material;
             GenerateMesh();
         }
 
-        private void GenerateMesh(bool onlyGenerateVertices = false)
+        /// <summary>
+        /// Generate the mesh
+        /// </summary>
+        protected virtual void GenerateMesh()
         {
-            int numPoints = splineData.Points.Count * currentVerticalResolution;
+            int numPoints = splineData.Points.Count * currentMeshResolution;
             GenerateVertices(numPoints);
-            GenerateTriangles(numPoints - currentVerticalResolution);
+            GenerateTriangles(GetTriangleCount(numPoints));
             GenerateUVs();
-            
+
             InitializeMesh();
         }
 
-        private void GenerateUVs()
+        /// <summary>
+        /// Generate the mesh vertices
+        /// </summary>
+        /// <param name="numPoints">Number of vertices</param>
+        protected virtual void GenerateVertices(int numPoints)
         {
-            uvs = new Vector2[vertices.Length];
-            for (int j = 0; j < currentVerticalResolution; j++)
-            {
-                float verticalT = ((float)j / (currentVerticalResolution - 1));
-                for (int i = 0; i < splineData.Points.Count; i++)
-                {
-                    float horizontalT, t = ((float)i / (splineData.Points.Count - 1)); ;
-                    switch (UVGenerationType)
-                    {
-                        case UVGenerationType.Mesh:
-                            {
-                                horizontalT = t;
-                                break;
-                            }
-                        case UVGenerationType.Segment:
-                            {                                
-                                float initT = t * splineData.Points.Count;
-                                int segmentIndex = Mathf.FloorToInt(initT);
-                                float nextT = (segmentIndex + 1f) / splineData.Points.Count;
-                                horizontalT = (t - initT) / (nextT - initT);
-                                break;
-                            }
-                        case UVGenerationType.Length:
-                            {
-                                horizontalT = t;
-                                break;
-                            }
-                        default:
-                            horizontalT = t;
-                            break;
-                    }
-                    uvs[i * currentVerticalResolution + j] = new Vector2(horizontalT, verticalT);
-                }
-            }
-        
+            vertices = new Vector3[numPoints];            
         }
 
-        private void GenerateVertices(int numPoints)
+        /// <summary>
+        /// Generate the triangles that define the faces of the mesh.
+        /// </summary>
+        /// <param name="numPoints">Number of triangle points</param>
+        protected virtual void GenerateTriangles(int numPoints)
         {
-            vertices = new Vector3[numPoints];
-            float angle;
-            float angleDelta = 360f / currentVerticalResolution;
-            float t;
-            float radiusValue = (splineData.useObjectTransform ? (currentRadius * defaultScaleMagnitude)/ splineData.objectTransform.localScale.magnitude : currentRadius);
-            bool useObjectSpace = splineData.useObjectTransform;
-            for (int i = 0; i < splineData.Points.Count; i++)
-            {
-                bool noRadius = false;
-                if(capSides && (i == 0 || i == splineData.Points.Count - 1))
-                {
-                    noRadius = true;
-                }
-                angle = 0;
-                t = (float)i / splineData.Points.Count;
-                for (int j = 0; j < currentVerticalResolution; j++)
-                {
-                    Vector3 pos;
-                    Quaternion rot = Quaternion.AngleAxis(angle, splineData.Tangents[i]);
-                    rot = splineData.useObjectTransform ? transform.rotation * rot : rot;
-                    if (noRadius)
-                        pos = Vector3.zero;
-                    else
-                    {
-
-                        pos = (rot * splineData.Normals[i]).normalized;
-                        if (useAnimationCurveForRadius)
-                        {
-                            pos *= radiusOverSpline.Evaluate(t) * currentRadius;
-                        }
-                        else pos *= currentRadius;
-                    }
-                    pos = transform.InverseTransformSplinePoint(pos + splineData.Points[i], useObjectSpace);
-                    vertices[i * currentVerticalResolution + j] = pos;
-                    angle += (angleDelta);
-                }
-            }
+            triangles = new int[numPoints];
         }
 
-        private void GenerateTriangles(int numPoints)
+        /// <summary>
+        /// Calculate the length of the triangles array.
+        /// </summary>
+        /// <param name="numPoints">Number of vertices</param>
+        /// <returns></returns>
+        protected abstract int GetTriangleCount(int numPoints);
+
+        /// <summary>
+        /// Generate UVs
+        /// </summary>
+        protected virtual void GenerateUVs()
         {
-            triangles = new int[numPoints * 6];
-            for (int i = 0, triangleIndex = 0; i < splineData.Points.Count - 1; i++)
-            {
-                int vertexIndex, startIndex;
-                for (int j = 0; j < currentVerticalResolution - 1; j++, triangleIndex += 6)
-                {
-                    vertexIndex = i * currentVerticalResolution + j;
-                    triangles[triangleIndex] = vertexIndex;
-                    triangles[triangleIndex + 1] = vertexIndex + 1;
-                    triangles[triangleIndex + 2] = vertexIndex + currentVerticalResolution;
-                    triangles[triangleIndex + 3] = triangles[triangleIndex + 2];
-                    triangles[triangleIndex + 4] = triangles[triangleIndex + 1];
-                    triangles[triangleIndex + 5] = triangles[triangleIndex + 3] + 1;
-                }
-                // Last index connects back to start
-                vertexIndex = i * currentVerticalResolution + currentVerticalResolution - 1;
-                startIndex = i * currentVerticalResolution;
-                triangles[triangleIndex] = vertexIndex;
-                triangles[triangleIndex + 1] = startIndex;
-                triangles[triangleIndex + 2] = vertexIndex + currentVerticalResolution;
-                triangles[triangleIndex + 3] = triangles[triangleIndex + 2];
-                triangles[triangleIndex + 4] = triangles[triangleIndex + 1];
-                triangles[triangleIndex + 5] = startIndex + currentVerticalResolution;
-                triangleIndex += 6;
-            }
+            uvs = new Vector2[vertices.Length];           
         }
+
+        /// <summary>
+        /// Default Mesh name
+        /// </summary>
+        protected abstract string GetDefaultName();
+
 
         public void SetClosedSpline(bool closed)
         {
@@ -230,6 +172,11 @@ namespace Hadi.Splines
                 mesh.Clear();
         }
 
+        public SplineRendererType GetRendererType()
+        {
+            return SplineRendererType.TubeMeshRenderer;
+        }
+
         public void Destroy()
         {
 #if UNITY_EDITOR
@@ -243,24 +190,21 @@ namespace Hadi.Splines
             };
 #endif
         }
-        public SplineRendererType GetRendererType()
-        {
-            return SplineRendererType.MeshRenderer;
-        }
 
-        private void OnValidate()
+
+        protected virtual void OnValidate()
         {
-            if (!radiusOverSpline.Equals(previousRadiusOverSpline))
+            if (!widthOverSplineAnimationCurve.Equals(previousWidthOverSpline))
             {
-                previousRadiusOverSpline = radiusOverSpline;
+                previousWidthOverSpline = widthOverSplineAnimationCurve;
             }
-            if (currentRadius != radius)
+            if (!heightOverSplineAnimationCurve.Equals(previousHeightOverSpline))
             {
-                currentRadius = radius;
-            }
-            if (currentVerticalResolution != verticalResolution)
+                previousHeightOverSpline = heightOverSplineAnimationCurve;
+            }            
+            if (currentMeshResolution != meshResolution)
             {
-                currentVerticalResolution = verticalResolution;
+                currentMeshResolution = meshResolution;
 
             }
 #if UNITY_EDITOR
