@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
-using System;
+using static UnityEditor.Handles;
 
 namespace Hadi.Splines.Editor
 {
@@ -18,18 +18,19 @@ namespace Hadi.Splines.Editor
         Vector3 anchor, control1, control2;
         Quaternion rotation;
         private int? pickedHandle;
+        private Vector3 pointTangent;
         private Spline spline;
         private List<Point> points;
         private void OnEnable()
         {
             spline = (target as Spline);
-            Undo.undoRedoPerformed += OnUndo;
+            Undo.undoRedoPerformed += Reset;
         }
         private void OnDisable()
         {
-            Undo.undoRedoPerformed -= OnUndo;
+            Undo.undoRedoPerformed -= Reset;
         }
-        private void OnUndo()
+        private void Reset()
         {
             spline = (target as Spline);
             points = spline.GetPoints();
@@ -41,11 +42,13 @@ namespace Hadi.Splines.Editor
             if (GUILayout.Button("Add Point"))
             {
                 Undo.RecordObject(spline, "Add Point To Spline");
+                Reset();
                 spline.AddPoint();
             }
             if (GUILayout.Button("Reset Spline"))
             {
                 Undo.RecordObject(spline, "Reset Spline");
+                Reset();
                 spline.ResetSpline();
             }
             base.OnInspectorGUI();
@@ -143,9 +146,10 @@ namespace Hadi.Splines.Editor
                 Point point = points[pickedHandle.Value];
                 Vector3 handlePos = spline.transform.TransformSplinePoint(point.anchor, spline.UseObjectTransform);
                
-
                 anchor = Handles.PositionHandle(handlePos, handleRotation);
-                rotation = Handles.Disc(point.rotation, handlePos, spline.GetPointTangent(pickedHandle.Value), 0.5f, false, 1);//Handles.RotationHandle(point.rotation, handlePos);
+                //rotation = Handles.Disc(point.rotation, handlePos, pointTangent, 0.4f, false, 1);
+                rotation = Handles.RotationHandle(point.rotation, handlePos);
+
                 if (EditorGUI.EndChangeCheck())
                 {
                     changed = true;
@@ -171,7 +175,7 @@ namespace Hadi.Splines.Editor
                 switch (point.mode)
                 {
                     case ControlMode.Aligned:
-                        control2 = Handles.Slider(c2Pos, c2Pos - anchor, 0.75f, Handles.ArrowHandleCap, 0.1f);
+                        control2 = Handles.Slider(c2Pos, c2Pos - anchor, 0.65f, Handles.ArrowHandleCap, 0.1f);
                         break;
                     case ControlMode.Mirrored:
                         break;
@@ -199,6 +203,7 @@ namespace Hadi.Splines.Editor
                 Handles.DrawLine(handlePos, c2Pos, lineThickness);
                 if (changed)
                 {
+                    pointTangent = spline.GetPointTangent(pickedHandle.Value);
                     point.Update(spline.SplineMode);
                     spline.GenerateSpline();
                 }
@@ -220,6 +225,7 @@ namespace Hadi.Splines.Editor
                     if (Handles.Button(handlePos, Quaternion.identity, spline.ANCHOR_SIZE, spline.ANCHOR_SIZE, Handles.SphereHandleCap))
                     {
                         pickedHandle = i;
+                        pointTangent = spline.GetPointTangent(pickedHandle.Value);
                     }
                 }
             }
