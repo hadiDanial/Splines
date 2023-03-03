@@ -78,7 +78,7 @@ namespace Hadi.Splines
             SplineData.objectTransform = transform;
             SplineData.useObjectTransform = useObjectTransform;
             splineRenderer = GetComponent<ISplineRenderer>();
-            RendererType = (splineRenderer == null) ? SplineRendererType.None : splineRenderer.GetRendererType();
+            rendererType = (splineRenderer == null) ? SplineRendererType.None : splineRenderer.GetRendererType();
         }
 
         private void Start()
