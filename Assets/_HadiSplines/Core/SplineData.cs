@@ -15,11 +15,14 @@ namespace Hadi.Splines
         private float splineLength;
         public Transform objectTransform;
         public bool useObjectTransform;
+
         public List<Vector3> Points { get => points; private set => points = value; }
         public List<Vector3> Normals { get => normals; private set => normals = value; }
         public List<Vector3> Tangents { get => tangents; private set => tangents = value; }
         public float Length { get => splineLength; }
         public List<float> CumulativeLengthAtPoint { get => cumulativeLengthAtPoint; private set => cumulativeLengthAtPoint = value; }
+
+        public int numPoints;
 
         public SplineData()
         {

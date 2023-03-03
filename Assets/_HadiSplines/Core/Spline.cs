@@ -9,7 +9,7 @@ namespace Hadi.Splines
     {
         [SerializeField]
         protected bool closedSpline = false;
-        [SerializeField, Range(1, 100)]
+        [SerializeField, Range(2, 25)]
         protected int segmentsPerCurve = 10;
         [SerializeField]
         protected List<Point> splinePointsList;
@@ -200,6 +200,7 @@ namespace Hadi.Splines
                 splineRenderer?.SetClosedSpline(false);
 
             SplineData.CalculateLength();
+            SplineData.numPoints = pointsCount;
             splineRenderer?.SetData(SplineData);
         }
 
@@ -232,7 +233,7 @@ namespace Hadi.Splines
         /// <param name="index">Index of the curve in the spline.</param>
         protected virtual void CalculateCurve(Point P1, Point P2, int index, bool isClosingCurve = false)
         {
-            int totalSegments = segmentsPerCurve * POINT_COUNT_PER_CURVE;
+            int totalSegments = segmentsPerCurve;// * POINT_COUNT_PER_CURVE;
 
             // By caching these, we reduce the amount of computations needed. Same result as DeCasteljau's, but more efficient.
             // See `The Continuity of Splines` by Freya Holmer, @6:10
@@ -248,15 +249,21 @@ namespace Hadi.Splines
             Vector3 factor2 = 3 * P1anchor - 6 * P1controlPoint2 + 3 *P2controlPoint1;
             Vector3 factor3 = -P1anchor + 3 * P1controlPoint2 - 3 * P2controlPoint1 + P2anchor;
 
-            int start = index * segmentsPerCurve * POINT_COUNT_PER_CURVE, end = start + totalSegments;
-            for (int i = start; i < end - 1; i++)
+            int start = index * segmentsPerCurve, end = start + totalSegments;
+            for (int i = start; i < end; i++)
             {
                 float t = ((float)i % totalSegments) / (end - start);
                 CalculatePoint(P1, P2, factor0, factor1, factor2, factor3, t);
             }
             // t = 1
-            if (isClosingCurve)
+            if (!isClosingCurve && index == splinePointsList.Count - 2)
+            {
                 CalculatePoint(P1, P2, factor0, factor1, factor2, factor3, 1);
+            }
+            if (isClosingCurve)
+            { 
+                CalculatePoint(P1, P2, factor0, factor1, factor2, factor3, 1);
+            }
         }
 
         /// <summary>
@@ -275,7 +282,6 @@ namespace Hadi.Splines
             float t3 = t2 * t;
 
             Vector3 P = factor0 + t * factor1 + t2 * factor2 + t3 * factor3;
-            //P = transform.TransformSplinePoint(P, UseWorldSpace);
             SplineData.Points.Add(P);
             P = factor1 + 2 * t * factor2 + 3 * t2 * factor3;
             SplineData.Tangents.Add(P);
@@ -332,7 +338,9 @@ namespace Hadi.Splines
                 prevUseObjectTransform = useObjectTransform;
                 SplineData.useObjectTransform = useObjectTransform;
             }
+#if UNITY_EDITOR
             GenerateSpline();
+#endif
         }
 
         public List<Point> GetPoints()
