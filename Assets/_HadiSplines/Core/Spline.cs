@@ -7,27 +7,24 @@ namespace Hadi.Splines
     [ExecuteInEditMode]
     public class Spline : MonoBehaviour
     {
-        [SerializeField]
+        [Header("Settings"), SerializeField, Tooltip("Should the spline be closed?")]
         protected bool closedSpline = false;
-        [SerializeField, Range(2, 25)]
-        protected int segmentsPerCurve = 10;
-        [SerializeField]
-        protected List<Point> splinePointsList;
-        [SerializeField]
-        private SplineMode splineMode = SplineMode.Full3D;
-        [SerializeField]
-        private EndOfSplineInstruction EndOfSplineInstruction = EndOfSplineInstruction.Loop;
-        [SerializeField]
-        private SplineRendererType rendererType = SplineRendererType.LineRenderer;
-        [SerializeField]
-        private SplineData splineData;
         [SerializeField, Tooltip("If true, the spline will be affected by the Transform component.")]
         private bool useObjectTransform = false;
-        private bool prevUseObjectTransform = false;
+        [SerializeField, Tooltip("This decides whether the spline will be constricted to a plane.")]
+        private SplineMode splineMode = SplineMode.Full3D;
+        [SerializeField, Tooltip("What to do if the spline receives a value outside of (0-1)?")]
+        private EndOfSplineInstruction EndOfSplineInstruction = EndOfSplineInstruction.Loop;
+        [SerializeField, Range(2, 25), Tooltip("How many segments there are between any two points. This decides the resolution of the spline.")]
+        protected int segmentsPerCurve = 10;
+        [SerializeField, Tooltip("List of all points in the spline.")]
+        protected List<Point> splinePointsList;
+        
+        [Header("Renderer") ,SerializeField]
+        private SplineRendererType rendererType = SplineRendererType.LineRenderer;
         [SerializeField]
         private Material material;
 
-        private ISplineRenderer splineRenderer;
 
         [Header("DEBUG")]
         [SerializeField]
@@ -42,10 +39,14 @@ namespace Hadi.Splines
         private bool resetSplineOnPlay = false;
         [SerializeField, Tooltip("Should the transform be reset when the spline is reset?")] 
         private bool resetTransformOnSplineReset = false;
+        [SerializeField]
+        private SplineData splineData;
 
+        private bool prevUseObjectTransform = false;        
         private Vector3 previousPosition;
         private Quaternion previousRotation;
         private Vector3 previousLocalScale;
+        private ISplineRenderer splineRenderer;
 
         /// <summary>
         /// Number of points per curve (two anchors, and a control point for each anchor).
