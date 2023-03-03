@@ -69,6 +69,7 @@ namespace Hadi.Splines
         public SplineMode SplineMode { get => splineMode; private set => splineMode = value; }
         public float Length { get => SplineData.Length; }
         public bool IsClosedSpline { get => IsClosedSpline; }
+        public SplineRendererType RendererType { get => rendererType; }
 
         private void Awake()
         {
@@ -77,7 +78,7 @@ namespace Hadi.Splines
             SplineData.objectTransform = transform;
             SplineData.useObjectTransform = useObjectTransform;
             splineRenderer = GetComponent<ISplineRenderer>();
-            rendererType = (splineRenderer == null) ? SplineRendererType.None : splineRenderer.GetRendererType();
+            RendererType = (splineRenderer == null) ? SplineRendererType.None : splineRenderer.GetRendererType();
         }
 
         private void Start()
@@ -487,7 +488,7 @@ namespace Hadi.Splines
 #if UNITY_EDITOR
                 UnityEditor.EditorApplication.delayCall += () =>
                 {
-                    if (splineRenderer != null && rendererSettings != null && rendererSettings.RendererType != rendererType)
+                    if (splineRenderer != null && rendererSettings != null && rendererSettings.RendererType != RendererType)
                     {
                         splineRenderer?.Destroy();
                         splineRenderer = null;
