@@ -124,8 +124,9 @@ namespace Hadi.Splines
         public void ResetSpline()
         {
             splinePointsList.Clear();
-            Point p1 = new Point(Vector3.left, Vector3.left * 0.5f);
-            Point p2 = new Point(Vector3.right, Vector3.left * 0.5f);
+            Vector3 control = (Vector3.left + Vector3.up) * 0.5f;
+            Point p1 = new Point(Vector3.left, control);
+            Point p2 = new Point(Vector3.right, control);
 
             splinePointsList.Add(p1);
             splinePointsList.Add(p2);
