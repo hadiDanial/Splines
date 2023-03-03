@@ -55,7 +55,7 @@ namespace Hadi.Splines
         protected virtual void OnValidate()
         {
 #if UNITY_EDITOR
-            SplineSettingsEditorUtility.RefreshSplines();
+            SplineSettingsEditorUtility.RefreshSplines(RendererType);
 #endif
         }
     }
