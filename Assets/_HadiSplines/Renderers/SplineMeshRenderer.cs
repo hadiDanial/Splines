@@ -161,6 +161,7 @@ namespace Hadi.Splines
                 {
                     Vector3 pos;
                     Quaternion rot = Quaternion.AngleAxis(angle, splineData.Tangents[i]);
+                    rot = splineData.useObjectTransform ? transform.rotation * rot : rot;
                     if (noRadius)
                         pos = Vector3.zero;
                     else
