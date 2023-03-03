@@ -15,6 +15,7 @@ namespace Hadi.Splines
         private float splineLength;
         public Transform objectTransform;
         public bool useObjectTransform;
+        public RendererSettings settings;
 
         public List<Vector3> Points { get => points; private set => points = value; }
         public List<Vector3> Normals { get => normals; private set => normals = value; }
@@ -57,6 +58,9 @@ namespace Hadi.Splines
             normals.Clear();
             cumulativeLengthAtPoint.Clear();
             splineLength = 0;
+            numPoints = 0;
+            settings = null;
+            useObjectTransform = false;
         }
     }
 }
