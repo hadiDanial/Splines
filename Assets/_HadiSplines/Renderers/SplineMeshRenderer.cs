@@ -62,9 +62,9 @@ namespace Hadi.Splines
                 meshFilter = gameObject.AddComponent<MeshFilter>();
         }
 
-        public void Setup(Material material)
+        public void Setup(RendererSettings settings)
         {
-            this.material = material;
+            this.material = settings?.Material;
             InitializeMesh();
             meshRenderer.sharedMaterial = material;
         }
@@ -80,8 +80,12 @@ namespace Hadi.Splines
             mesh.RecalculateNormals();
             mesh.RecalculateTangents();
             mesh.RecalculateUVDistributionMetrics();
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.delayCall += () => { meshFilter.mesh = mesh; };
+#else
             meshFilter.mesh = mesh;
-        }
+#endif
+            }
 
         public void SetData(SplineData splineData)
         {
