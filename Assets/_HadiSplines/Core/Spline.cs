@@ -38,6 +38,8 @@ namespace Hadi.Splines
         [SerializeField, Tooltip("Should the transform be reset when the spline is reset?")] 
         private bool resetTransformOnSplineReset = true;
         [SerializeField]
+        private SplineShapes shapeOnReset = SplineShapes.DefaultShape;
+        [SerializeField]
         private SplineData splineData;
 
         private bool prevUseObjectTransform = false;        
@@ -64,7 +66,7 @@ namespace Hadi.Splines
         public bool UseObjectTransform { get => useObjectTransform; }
         public SplineMode SplineMode { get => splineMode; private set => splineMode = value; }
         public float Length { get => SplineData.Length; }
-        public bool IsClosedSpline { get => IsClosedSpline; }
+        public bool IsClosedSpline { get => closedSpline; }
         public SplineRendererType RendererType { get => rendererType; }
 
         private void Awake()
@@ -109,7 +111,9 @@ namespace Hadi.Splines
                 position = Vector3.zero;
             }
             Vector3 newPointPosition = transform.TransformSplinePoint( position + tangent * NEW_POINT_DISTANCE, UseObjectTransform);
-            splinePointsList.Add(new Point(transform.InverseTransformSplinePoint(newPointPosition, UseObjectTransform), -tangent));
+            Point newPoint = new Point(transform.InverseTransformSplinePoint(newPointPosition, UseObjectTransform), -tangent);
+            //newPoint.rotation = Quaternion.AngleAxis(90, tangent);
+            splinePointsList.Add(newPoint);
             GenerateSpline();
         }
 
@@ -123,18 +127,8 @@ namespace Hadi.Splines
         public void ResetSpline()
         {
             splinePointsList.Clear();
-            Vector3 control = (Vector3.left + Vector3.up) * 0.5f;
-            Point p1 = new Point(Vector3.left, control);
-            Point p2 = new Point(Vector3.right, control);
+            splinePointsList = SplineShapesUtility.CreateShape(shapeOnReset, IsClosedSpline);
 
-            splinePointsList.Add(p1);
-            splinePointsList.Add(p2);
-            if (closedSpline)
-            {
-                Point p3 = new Point(Vector3.down, Vector3.right);
-                p3.rotation = Quaternion.Euler(180, 0, 0);
-                splinePointsList.Add(p3);
-            }
             if(resetTransformOnSplineReset)
             {
                 transform.SetPositionAndRotation(Vector2.zero, Quaternion.identity);
@@ -202,9 +196,9 @@ namespace Hadi.Splines
         /// </summary>
         protected virtual void CloseSpline()
         {
-            if (splinePointsList.Count < 3)
+            if (splinePointsList.Count < 2)
             {
-                Debug.LogError("Cannot close a spline with less than three points! " + gameObject.name);
+                Debug.LogError("Cannot close a spline with less than two points! " + gameObject.name);
                 closedSpline = false;
                 return;
             }
@@ -271,7 +265,10 @@ namespace Hadi.Splines
             SplineData.Points.Add(P);
             P = factor1 + 2 * t * factor2 + 3 * t2 * factor3;
             SplineData.Tangents.Add(P);
-            P = Quaternion.Slerp(P1.rotation, P2.rotation, t) * Vector3.up;
+            if(P1.relativeControlPoint2 != Vector3.zero && P2.relativeControlPoint1 != Vector3.zero)
+                P = Quaternion.Slerp(P1.rotation, P2.rotation, t) * Vector3.up;
+            else 
+                P = Quaternion.Slerp(P1.rotation, P2.rotation, 0.5f) * Vector3.up;
             SplineData.Normals.Add(P.normalized);
         }
 
