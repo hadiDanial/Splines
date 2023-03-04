@@ -55,7 +55,7 @@ namespace Hadi.Splines
         /// <summary>
         /// Distance between the last point and a newly added point.
         /// </summary>
-        private const float NEW_POINT_DISTANCE = 2.5f;
+        private const float NEW_POINT_DISTANCE = 1.75f;
 
         public float ANCHOR_SIZE { get => anchorSize; }
         public float CONTROL_SIZE { get => controlSize; }
@@ -108,8 +108,8 @@ namespace Hadi.Splines
                 tangent = Vector3.right;
                 position = Vector3.zero;
             }
-            Vector3 newPointPosition = transform.InverseTransformSplinePoint( position + tangent * NEW_POINT_DISTANCE, UseObjectTransform);
-            splinePointsList.Add(new Point(newPointPosition, -tangent));
+            Vector3 newPointPosition = transform.TransformSplinePoint( position + tangent * NEW_POINT_DISTANCE, UseObjectTransform);
+            splinePointsList.Add(new Point(transform.InverseTransformSplinePoint(newPointPosition, UseObjectTransform), -tangent));
             GenerateSpline();
         }
 
