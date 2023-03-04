@@ -60,7 +60,6 @@ namespace Hadi.Splines
             splineLength = 0;
             numPoints = 0;
             settings = null;
-            useObjectTransform = false;
         }
     }
 }
