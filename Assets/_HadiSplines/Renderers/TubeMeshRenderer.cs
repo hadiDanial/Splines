@@ -42,8 +42,7 @@ namespace Hadi.Splines
                 for (int j = 0; j < currentMeshResolution; j++)
                 {
                     Vector3 rotatedPosition;
-                    Quaternion rotationByAngle = Quaternion.AngleAxis(angle, splineData.Tangents[i]);
-                    rotationByAngle = useObjectTransform ? transform.rotation * rotationByAngle : rotationByAngle;
+                    Quaternion rotationByAngle = Quaternion.AngleAxis(angle, splineData.Tangents[i]) * transform.rotation;
                     if (hasZeroRadius)
                         rotatedPosition = Vector3.zero;
                     else
