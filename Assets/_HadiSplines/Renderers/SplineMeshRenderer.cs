@@ -31,8 +31,8 @@ namespace Hadi.Splines
         protected Vector2[] uvs;
 
         [Header("DEBUG")]
+        [SerializeField] private bool drawGizmos = true;
         [SerializeField] private bool drawVertexIndices = false;
-        [SerializeField] private bool drawGizmos;
         protected RendererSettings rendererSettings;
 
         protected bool isClosed;
@@ -43,7 +43,6 @@ namespace Hadi.Splines
         protected MeshRenderer meshRenderer;
         protected AnimationCurve previousWidthOverSpline, previousHeightOverSpline;
 
-        protected const float defaultScaleMagnitude = 1.73205080757f; // Sqrt(3)
         private void Awake()
         {
             SetupMesh();
@@ -96,10 +95,10 @@ namespace Hadi.Splines
 
         public virtual void SetData(SplineData splineData)
         {
-            currentMeshResolution = meshResolution;
             this.splineData = splineData;
             rendererSettings = splineData.settings;
             SetSettings(splineData.settings);
+            currentMeshResolution = meshResolution;
             if (meshRenderer != null)
                 meshRenderer.sharedMaterial = rendererSettings?.Material;
             GenerateMesh();
