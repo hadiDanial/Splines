@@ -29,16 +29,14 @@ namespace Hadi.Splines
         [Header("DEBUG")]
         [SerializeField]
         private bool drawGizmos = true;
-        [SerializeField]
-        private bool drawNormals, drawTangents;
         [SerializeField, Range(0.01f, 0.5f)]
-        private float controlSize = 0.2f;
+        private float controlSize = 0.15f;
         [Range(0.01F, 0.5F), SerializeField]
-        private float anchorSize = 0.15f;
+        private float anchorSize = 0.075f;
         [SerializeField, Tooltip("Should the spline be reset when entering play mode?")] 
         private bool resetSplineOnPlay = false;
         [SerializeField, Tooltip("Should the transform be reset when the spline is reset?")] 
-        private bool resetTransformOnSplineReset = false;
+        private bool resetTransformOnSplineReset = true;
         [SerializeField]
         private SplineData splineData;
 
@@ -63,8 +61,6 @@ namespace Hadi.Splines
         public float CONTROL_SIZE { get => controlSize; }
         public SplineData SplineData { get => splineData; private set => splineData = value; }
         public bool DrawGizmos { get => drawGizmos; }
-        public bool DrawNormals { get => drawNormals; }
-        public bool DrawTangents { get => drawTangents; }
         public bool UseObjectTransform { get => useObjectTransform; }
         public SplineMode SplineMode { get => splineMode; private set => splineMode = value; }
         public float Length { get => SplineData.Length; }
@@ -86,7 +82,7 @@ namespace Hadi.Splines
             if (resetSplineOnPlay || splinePointsList.Count == 0)
                 ResetSpline();
             else
-                GenerateSpline();
+                Refresh();
         }
 
         [ExecuteInEditMode]
@@ -144,7 +140,7 @@ namespace Hadi.Splines
                 transform.SetPositionAndRotation(Vector2.zero, Quaternion.identity);
                 transform.localScale = Vector3.one;
             }
-            GenerateSpline();
+            Refresh();
         }
 
         [ContextMenu("Setup Renderer")]
@@ -153,7 +149,10 @@ namespace Hadi.Splines
             if (rendererSettings == null)
                 Debug.LogWarning($"No settings for spline renderer @{gameObject.name}!");
             else
+            {
                 splineRenderer = RendererSettings.GetRenderer(rendererSettings, gameObject, splineData);
+                rendererType = splineRenderer.GetRendererType();
+            }
         }
 
         /// <summary>
@@ -468,6 +467,7 @@ namespace Hadi.Splines
         public void Refresh()
         {
             splineData.settings = rendererSettings;
+            splineData.useObjectTransform = useObjectTransform;
             SetRendererType();
             GenerateSpline();
         }
@@ -488,7 +488,7 @@ namespace Hadi.Splines
 #if UNITY_EDITOR
                 UnityEditor.EditorApplication.delayCall += () =>
                 {
-                    if (splineRenderer != null && rendererSettings != null && rendererSettings.RendererType != RendererType)
+                    if (rendererSettings != null && rendererSettings.RendererType != RendererType)
                     {
                         splineRenderer?.Destroy();
                         splineRenderer = null;
