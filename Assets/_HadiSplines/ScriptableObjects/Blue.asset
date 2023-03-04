@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   material: {fileID: 2100000, guid: 7ee8825deb8ffd44c974bf7bba3f4281, type: 2}
   uVGenerationType: 0
-  radius: 0.25
+  radius: 0.1
