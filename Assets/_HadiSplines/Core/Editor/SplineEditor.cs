@@ -21,10 +21,11 @@ namespace Hadi.Splines.Editor
         private Vector3 pointTangent;
         private Spline spline;
         private List<Point> points;
+
         private void OnEnable()
         {
-            spline = (target as Spline);
             Undo.undoRedoPerformed += Reset;
+            Reset();
         }
         private void OnDisable()
         {
@@ -47,9 +48,21 @@ namespace Hadi.Splines.Editor
             }
             if (GUILayout.Button("Reset Spline"))
             {
-                Undo.RecordObject(spline, "Reset Spline");
-                Reset();
-                spline.ResetSpline();
+                if (EditorUtility.DisplayDialog("Reset Spline", "Are you sure you want to the spline?", "Yes", "Cancel"))
+                {
+                    Undo.RecordObject(spline, "Reset Spline");
+                    Reset();
+                    spline.ResetSpline();
+                }
+            }
+            if (GUILayout.Button("Reset Point Rotations"))
+            {
+                if (EditorUtility.DisplayDialog("Reset Point Rotations", "Are you sure you want to reset all point rotations?", "Yes", "Cancel"))
+                {
+                    Undo.RecordObject(spline, "Reset Point Rotations");
+                    spline.ResetPointRotations();
+                    Reset();
+                }
             }
             base.OnInspectorGUI();
         }
@@ -64,11 +77,6 @@ namespace Hadi.Splines.Editor
             DrawPointButtons(spline);
             DrawHandles(spline, handleRotation);
             DrawSplineDetails(spline);
-            if (spline.transform.hasChanged)
-            {
-                //spline.GenerateSpline();
-                spline.transform.hasChanged = false;
-            }
         }
 
         private void DrawDefaultTransformHandle(Spline spline, Vector3 origin, Quaternion handleRotation)
@@ -77,7 +85,6 @@ namespace Hadi.Splines.Editor
             {
                 EditorGUI.BeginChangeCheck();
                 Transform splineTransform = spline.transform;
-
                 switch (Tools.current)
                 {
                     case Tool.Move:

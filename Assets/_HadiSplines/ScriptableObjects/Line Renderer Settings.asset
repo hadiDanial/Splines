@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce042377ed871cd468bf4e0aba9f9372, type: 3}
+  m_Name: Line Renderer Settings
+  m_EditorClassIdentifier: 
+  material: {fileID: 10306, guid: 0000000000000000f000000000000000, type: 0}
+  uVGenerationType: 0
+  useWidthCurve: 0
+  startWidth: 0.073
+  endWidth: 0.091
+  widthCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  startColor: {r: 0.8962264, g: 0.13105197, b: 0.13105197, a: 1}
+  endColor: {r: 0.2962624, g: 1, b: 0.2028302, a: 1}
+  lineAlignment: 0

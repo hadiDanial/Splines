@@ -9,15 +9,15 @@ namespace Hadi.Splines
     {
         private LineRenderer lineRenderer;
         private SplineData splineData;
+        private SplineLineRendererSettings settings;
         private void Awake()
         {
             InitializeLineRenderer();            
         }
 
-        public void Setup(Material material)
+        public void Setup()
         {
             InitializeLineRenderer();
-            lineRenderer.material = material;
         }
 
         private void InitializeLineRenderer()
@@ -32,8 +32,24 @@ namespace Hadi.Splines
         public void SetData(SplineData splineData)
         {
             this.splineData = splineData;
+            settings = (SplineLineRendererSettings)splineData.settings;
+            lineRenderer.material = splineData.settings?.Material;
             int count = splineData.Points.Count;
-            lineRenderer.positionCount = 0;
+            
+            if (settings.useWidthCurve)
+            {
+                lineRenderer.widthCurve = settings.WidthCurve;
+            }
+            else
+            {
+                lineRenderer.widthCurve = AnimationCurve.Constant(0,1,settings.StartWidth);
+                lineRenderer.startWidth = settings.StartWidth;
+                lineRenderer.endWidth = settings.EndWidth;
+            }
+            lineRenderer.startColor = settings.StartColor;
+            lineRenderer.endColor = settings.EndColor;
+            lineRenderer.alignment = settings.LineAlignment;
+
             lineRenderer.positionCount = count;
             for (int i = 0; i < splineData.Points.Count; i++)
             {

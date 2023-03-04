@@ -3,13 +3,13 @@ using UnityEngine;
 
 namespace Hadi.Splines
 {
-    internal interface ISplineRenderer
+    public interface ISplineRenderer
     {
         /// <summary>
         /// Sets the spline renderer up.
         /// </summary>
         /// <param name="material">The material that the renderer should use.</param>
-        public void Setup(Material material);
+        public void Setup();
 
         /// <summary>
         /// Sets the spline data that the renderer will use to render the spline.
@@ -39,13 +39,17 @@ namespace Hadi.Splines
         /// </summary>
         public void Destroy();
 
+        /// <summary>
+        /// Returns the renderer type for this spline renderer.
+        /// </summary>
         public SplineRendererType GetRendererType();
     }
 
     public enum SplineRendererType
     { 
         LineRenderer,
-        MeshRenderer,
+        TubeMeshRenderer,
+        CustomMeshRenderer,
         None
     }
 

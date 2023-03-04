@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using UnityEngine;
 
 namespace Hadi.Splines
@@ -18,27 +19,26 @@ namespace Hadi.Splines
         [SerializeField, Range(2, 25), Tooltip("How many segments there are between any two points. This decides the resolution of the spline.")]
         protected int segmentsPerCurve = 10;
         [SerializeField, Tooltip("List of all points in the spline.")]
-        protected List<Point> splinePointsList;
+        protected List<Point> splinePointsList = new List<Point>();
         
-        [Header("Renderer") ,SerializeField]
-        private SplineRendererType rendererType = SplineRendererType.LineRenderer;
-        [SerializeField]
-        private Material material;
+        [Header("Renderer") ,SerializeField]        
+        private RendererSettings rendererSettings;
+        private SplineRendererType rendererType;
 
 
         [Header("DEBUG")]
         [SerializeField]
         private bool drawGizmos = true;
-        [SerializeField]
-        private bool drawNormals, drawTangents;
         [SerializeField, Range(0.01f, 0.5f)]
-        private float controlSize = 0.2f;
+        private float controlSize = 0.15f;
         [Range(0.01F, 0.5F), SerializeField]
-        private float anchorSize = 0.15f;
+        private float anchorSize = 0.075f;
         [SerializeField, Tooltip("Should the spline be reset when entering play mode?")] 
         private bool resetSplineOnPlay = false;
         [SerializeField, Tooltip("Should the transform be reset when the spline is reset?")] 
-        private bool resetTransformOnSplineReset = false;
+        private bool resetTransformOnSplineReset = true;
+        [SerializeField]
+        private SplineShapes shapeOnReset = SplineShapes.DefaultShape;
         [SerializeField]
         private SplineData splineData;
 
@@ -47,6 +47,7 @@ namespace Hadi.Splines
         private Quaternion previousRotation;
         private Vector3 previousLocalScale;
         private ISplineRenderer splineRenderer;
+        private RendererSettings currentSettings;
 
         /// <summary>
         /// Number of points per curve (two anchors, and a control point for each anchor).
@@ -56,18 +57,17 @@ namespace Hadi.Splines
         /// <summary>
         /// Distance between the last point and a newly added point.
         /// </summary>
-        private const float NEW_POINT_DISTANCE = 2.5f;
+        private const float NEW_POINT_DISTANCE = 1.75f;
 
         public float ANCHOR_SIZE { get => anchorSize; }
         public float CONTROL_SIZE { get => controlSize; }
         public SplineData SplineData { get => splineData; private set => splineData = value; }
         public bool DrawGizmos { get => drawGizmos; }
-        public bool DrawNormals { get => drawNormals; }
-        public bool DrawTangents { get => drawTangents; }
         public bool UseObjectTransform { get => useObjectTransform; }
         public SplineMode SplineMode { get => splineMode; private set => splineMode = value; }
         public float Length { get => SplineData.Length; }
-        public bool IsClosedSpline { get => IsClosedSpline; }
+        public bool IsClosedSpline { get => closedSpline; }
+        public SplineRendererType RendererType { get => rendererType; }
 
         private void Awake()
         {
@@ -84,7 +84,7 @@ namespace Hadi.Splines
             if (resetSplineOnPlay || splinePointsList.Count == 0)
                 ResetSpline();
             else
-                GenerateSpline();
+                Refresh();
         }
 
         [ExecuteInEditMode]
@@ -110,8 +110,10 @@ namespace Hadi.Splines
                 tangent = Vector3.right;
                 position = Vector3.zero;
             }
-            Vector3 newPointPosition = transform.InverseTransformSplinePoint( position + tangent * NEW_POINT_DISTANCE, UseObjectTransform);
-            splinePointsList.Add(new Point(newPointPosition, -tangent));
+            Vector3 newPointPosition = transform.TransformSplinePoint( position + tangent * NEW_POINT_DISTANCE, UseObjectTransform);
+            Point newPoint = new Point(transform.InverseTransformSplinePoint(newPointPosition, UseObjectTransform), -tangent);
+            //newPoint.rotation = Quaternion.AngleAxis(90, tangent);
+            splinePointsList.Add(newPoint);
             GenerateSpline();
         }
 
@@ -125,52 +127,26 @@ namespace Hadi.Splines
         public void ResetSpline()
         {
             splinePointsList.Clear();
-            Vector3 control = (Vector3.left + Vector3.up) * 0.5f;
-            Point p1 = new Point(Vector3.left, control);
-            Point p2 = new Point(Vector3.right, control);
+            splinePointsList = SplineShapesUtility.CreateShape(shapeOnReset, IsClosedSpline);
 
-            splinePointsList.Add(p1);
-            splinePointsList.Add(p2);
-            if (closedSpline)
-            {
-                Point p3 = new Point(Vector3.down, Vector3.right);
-                p3.rotation = Quaternion.Euler(180, 0, 0);
-                splinePointsList.Add(p3);
-            }
             if(resetTransformOnSplineReset)
             {
                 transform.SetPositionAndRotation(Vector2.zero, Quaternion.identity);
                 transform.localScale = Vector3.one;
             }
-            GenerateSpline();
+            Refresh();
         }
 
         [ContextMenu("Setup Renderer")]
         protected void SetRendererType()
         {
-            switch (rendererType)
+            if (rendererSettings == null)
+                Debug.LogWarning($"No settings for spline renderer @{gameObject.name}!");
+            else
             {
-                case SplineRendererType.LineRenderer:
-                    splineRenderer = GetNewRenderer<SplineLineRenderer>();
-                    break;
-                case SplineRendererType.MeshRenderer:
-                    splineRenderer = GetNewRenderer<SplineMeshRenderer>();
-                    break;
-                case SplineRendererType.None:
-                    break;
-                default:
-                    splineRenderer = GetNewRenderer<SplineLineRenderer>();
-                    break;
+                splineRenderer = RendererSettings.GetRenderer(rendererSettings, gameObject, splineData);
+                rendererType = splineRenderer.GetRendererType();
             }
-            splineRenderer?.Setup(material);
-            splineRenderer?.SetData(splineData);
-        }
-        private ISplineRenderer GetNewRenderer<T>() where T : MonoBehaviour, ISplineRenderer
-        {
-            ISplineRenderer renderer = GetComponent<T>();
-            if (renderer == null)
-                renderer = gameObject.AddComponent<T>();
-            return renderer;
         }
 
         /// <summary>
@@ -188,6 +164,7 @@ namespace Hadi.Splines
             SavePreviousTransform();
 
             SplineData.Clear();
+            SplineData.settings = currentSettings;
             splineRenderer?.Clear();
             for (int i = 0; i < pointsCount - 1; i++)
             {
@@ -203,7 +180,8 @@ namespace Hadi.Splines
 
             SplineData.CalculateLength();
             SplineData.numPoints = pointsCount;
-            splineRenderer?.SetData(SplineData);
+            if(splineRenderer != null)
+                splineRenderer?.SetData(SplineData);
         }
 
         private void SavePreviousTransform()
@@ -218,9 +196,9 @@ namespace Hadi.Splines
         /// </summary>
         protected virtual void CloseSpline()
         {
-            if (splinePointsList.Count < 3)
+            if (splinePointsList.Count < 2)
             {
-                Debug.LogError("Cannot close a spline with less than three points! " + gameObject.name);
+                Debug.LogError("Cannot close a spline with less than two points! " + gameObject.name);
                 closedSpline = false;
                 return;
             }
@@ -287,7 +265,10 @@ namespace Hadi.Splines
             SplineData.Points.Add(P);
             P = factor1 + 2 * t * factor2 + 3 * t2 * factor3;
             SplineData.Tangents.Add(P);
-            P = Quaternion.Slerp(P1.rotation, P2.rotation, t) * Vector3.up;
+            if(P1.relativeControlPoint2 != Vector3.zero && P2.relativeControlPoint1 != Vector3.zero)
+                P = Quaternion.Slerp(P1.rotation, P2.rotation, t) * Vector3.up;
+            else 
+                P = Quaternion.Slerp(P1.rotation, P2.rotation, 0.5f) * Vector3.up;
             SplineData.Normals.Add(P.normalized);
         }
 
@@ -311,39 +292,6 @@ namespace Hadi.Splines
             return Vector3.Lerp(d, e, t);
         }
 
-        protected void OnValidate()
-        {
-            if (splinePointsList == null) return;
-            if (splinePointsList.Count == 0) return;
-            if(splineRenderer == null) splineRenderer = GetComponent<ISplineRenderer>();
-            foreach (Point point in splinePointsList)
-            {
-                point.Refresh(SplineMode);
-            }
-            if ((splineRenderer != null && rendererType != splineRenderer.GetRendererType()) || splineRenderer == null)
-            {
-#if UNITY_EDITOR
-                UnityEditor.EditorApplication.delayCall += () =>
-                {
-                    if(splineRenderer != null)
-                    {
-                        splineRenderer?.Destroy();
-                        splineRenderer = null;
-                    }
-                    SetRendererType();
-
-                };
-#endif
-            }
-            if(prevUseObjectTransform != useObjectTransform)
-            {
-                prevUseObjectTransform = useObjectTransform;
-                SplineData.useObjectTransform = useObjectTransform;
-            }
-#if UNITY_EDITOR
-            GenerateSpline();
-#endif
-        }
 
         public List<Point> GetPoints()
         {
@@ -483,6 +431,7 @@ namespace Hadi.Splines
 
         private void OnDrawGizmos()
         {
+            if (splinePointsList.Count == 0) ResetSpline();
             CheckTransformChanged();
         }
 
@@ -497,6 +446,67 @@ namespace Hadi.Splines
         public Vector3 GetPointTangent(int value)
         {
             return GetTangent(((float)value) / splinePointsList.Count);
+        }
+
+        public void ResetPointRotations()
+        {
+            SetPointRotations(Quaternion.identity);
+        }
+        public void SetPointRotations(Quaternion rotation)
+        {
+            foreach (Point point in splinePointsList)
+            {
+                point.rotation = rotation;
+            }
+            GenerateSpline();
+        }
+
+        public void Refresh()
+        {
+            splineData.settings = rendererSettings;
+            splineData.useObjectTransform = useObjectTransform;
+            SetRendererType();
+            GenerateSpline();
+        }
+        protected void OnValidate()
+        {
+            if (splinePointsList == null) return;
+            if (splinePointsList.Count == 0) return;
+            if (splineRenderer == null) splineRenderer = GetComponent<ISplineRenderer>();
+            foreach (Point point in splinePointsList)
+            {
+                point.Refresh(SplineMode);
+            }
+            bool generate = true;
+            if (currentSettings != rendererSettings || splineRenderer == null)
+            {
+                currentSettings = rendererSettings;
+                generate = false;
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.delayCall += () =>
+                {
+                    if (rendererSettings != null && rendererSettings.RendererType != RendererType)
+                    {
+                        splineRenderer?.Destroy();
+                        splineRenderer = null;
+                    }
+                    if (currentSettings != null)
+                    {
+                        Refresh();
+                    }
+
+                };
+#endif
+            }
+            if (prevUseObjectTransform != useObjectTransform)
+            {
+                prevUseObjectTransform = useObjectTransform;
+                SplineData.useObjectTransform = useObjectTransform;
+            }
+#if UNITY_EDITOR
+            if(generate)
+                GenerateSpline();
+#endif
         }
     }
 }
