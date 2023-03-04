@@ -29,36 +29,34 @@ namespace Hadi.Splines
             float angle;
             float angleDelta = 360f / currentMeshResolution;
             float t;
-            float radiusValue = (splineData.useObjectTransform ? (currentRadius * defaultScaleMagnitude) / splineData.objectTransform.localScale.magnitude : currentRadius);
-            bool useObjectSpace = splineData.useObjectTransform;
+            bool useObjectTransform = splineData.useObjectTransform;
             for (int i = 0; i < splineData.Points.Count; i++)
             {
-                bool noRadius = false;
+                bool hasZeroRadius = false;
                 if (capSides && (i == 0 || i == splineData.Points.Count - 1))
                 {
-                    noRadius = true;
+                    hasZeroRadius = true;
                 }
                 angle = 0;
                 t = (float)i / splineData.Points.Count;
                 for (int j = 0; j < currentMeshResolution; j++)
                 {
-                    Vector3 pos;
-                    Quaternion rot = Quaternion.AngleAxis(angle, splineData.Tangents[i]);
-                    rot = splineData.useObjectTransform ? transform.rotation * rot : rot;
-                    if (noRadius)
-                        pos = Vector3.zero;
+                    Vector3 rotatedPosition;
+                    Quaternion rotationByAngle = Quaternion.AngleAxis(angle, splineData.Tangents[i]);
+                    rotationByAngle = useObjectTransform ? transform.rotation * rotationByAngle : rotationByAngle;
+                    if (hasZeroRadius)
+                        rotatedPosition = Vector3.zero;
                     else
                     {
 
-                        pos = (rot * splineData.Normals[i]).normalized;
+                        rotatedPosition = (rotationByAngle * splineData.Normals[i]).normalized;
                         if (useAnimationCurve)
                         {
-                            pos *= widthOverSplineAnimationCurve.Evaluate(t) * currentRadius;
+                            rotatedPosition *= widthOverSplineAnimationCurve.Evaluate(t) * currentRadius;
                         }
-                        else pos *= currentRadius;
+                        else rotatedPosition *= currentRadius;
                     }
-                    pos = transform.InverseTransformSplinePoint(pos + splineData.Points[i], useObjectSpace);
-                    vertices[i * currentMeshResolution + j] = pos;
+                    vertices[i * currentMeshResolution + j] = transform.InverseTransformSplinePoint(rotatedPosition + splineData.Points[i], useObjectTransform) ;
                     angle += (angleDelta);
                 }
             }
