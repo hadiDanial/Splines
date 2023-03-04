@@ -33,6 +33,9 @@ namespace Hadi.Splines
                 case SplineRendererType.TubeMeshRenderer:
                     splineRenderer = GetNewRenderer<TubeMeshRenderer>(splineObject);
                     break;
+                case SplineRendererType.CustomMeshRenderer:
+                    splineRenderer = GetNewRenderer<CustomMeshRenderer>(splineObject);
+                    break;
                 case SplineRendererType.None:
                     break;
                 default:
