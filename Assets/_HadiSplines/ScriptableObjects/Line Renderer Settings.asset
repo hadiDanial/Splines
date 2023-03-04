@@ -43,4 +43,4 @@ MonoBehaviour:
     m_RotationOrder: 4
   startColor: {r: 0.8962264, g: 0.13105197, b: 0.13105197, a: 1}
   endColor: {r: 0.2962624, g: 1, b: 0.2028302, a: 1}
-  lineAlignment: 1
+  lineAlignment: 0

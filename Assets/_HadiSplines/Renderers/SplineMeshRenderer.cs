@@ -86,12 +86,14 @@ namespace Hadi.Splines
             mesh.RecalculateNormals();
             mesh.RecalculateTangents();
             mesh.RecalculateUVDistributionMetrics();
+
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.delayCall += () => { if(meshFilter != null) meshFilter.mesh = mesh; };
 #else
             meshFilter.mesh = mesh;
 #endif
             }
+      
 
         public virtual void SetData(SplineData splineData)
         {
