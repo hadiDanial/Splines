@@ -111,7 +111,7 @@ namespace Hadi.Splines
         /// </summary>
         protected virtual void GenerateMesh()
         {
-            int numPoints = splineData.Points.Count * currentMeshResolution;
+            int numPoints = splineData.SegmentedPoints.Count * currentMeshResolution;
             GenerateVertices(numPoints);
             GenerateTriangles(GetTriangleCount(numPoints));
             GenerateUVs();

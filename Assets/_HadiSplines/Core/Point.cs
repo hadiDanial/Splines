@@ -8,6 +8,7 @@ namespace Hadi.Splines
     {
         public Vector3 anchor;
         public Quaternion rotation = Quaternion.identity;
+        public Vector3 scale = Vector3.one;
         public Vector3 relativeControlPoint1, relativeControlPoint2;
         public ControlMode mode;
 

@@ -262,7 +262,7 @@ namespace Hadi.Splines
             float t3 = t2 * t;
 
             Vector3 P = factor0 + t * factor1 + t2 * factor2 + t3 * factor3;
-            SplineData.Points.Add(P);
+            SplineData.SegmentedPoints.Add(P);
             P = factor1 + 2 * t * factor2 + 3 * t2 * factor3;
             SplineData.Tangents.Add(P);
             if(P1.relativeControlPoint2 != Vector3.zero && P2.relativeControlPoint1 != Vector3.zero)
@@ -351,7 +351,7 @@ namespace Hadi.Splines
         {
             SplineSegment segment = GetSplineSegment(t);
 
-            bool looped = closedSpline && segment.pointIndex >= splineData.Points.Count - 1;
+            bool looped = closedSpline && segment.pointIndex >= splineData.SegmentedPoints.Count - 1;
             //print($"index: {segment.pointIndex} / {splineData.Points.Count}  looped={looped}");
             SplineDataAtPoint data = SplineUtility.GetDataAtSegment(SplineData, segment, looped);
 
@@ -366,7 +366,7 @@ namespace Hadi.Splines
         private SplineSegment GetSplineSegment(float percentageAlongSpline)
         {
             percentageAlongSpline = CalculateEndOfSplineInstruction(percentageAlongSpline);
-            int numSegments = splineData.Points.Count;
+            int numSegments = splineData.SegmentedPoints.Count;
             float percentPerSegment = 1f / numSegments;
             int segmentIndex = Mathf.FloorToInt(percentageAlongSpline * numSegments);
             float t = (percentageAlongSpline - segmentIndex * percentPerSegment) * numSegments;
@@ -401,7 +401,7 @@ namespace Hadi.Splines
             int count = splineData.CumulativeLengthAtPoint.Count;
             bool found = false;
             distance = CalculateEndOfSplineInstruction(distance, maxDistance);
-            int numSegments = splineData.Points.Count + (closedSpline ? 1 : 0);
+            int numSegments = splineData.SegmentedPoints.Count + (closedSpline ? 1 : 0);
             float percentPerSegment = 1f / numSegments;
             if(distance == 0 || distance < splineData.CumulativeLengthAtPoint[0]) return GetDataAtPoint(0);         
             int i = index;

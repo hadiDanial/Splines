@@ -130,16 +130,16 @@ namespace Hadi.Splines.Editor
             if (spline.DrawGizmos)
             {
                 Transform splineTransform = spline.transform;
-                for (int i = 0; i < data.Points.Count; i++)
+                for (int i = 0; i < data.SegmentedPoints.Count; i++)
                 {
                     Handles.color = Color.white;
-                    Vector3 p = data.Points[i];
+                    Vector3 p = data.SegmentedPoints[i];
                     Handles.DrawLine(p, p + data.Normals[i] * 0.15f);
                     Handles.color = Color.green;
                     Handles.DrawLine(p, p + data.Tangents[i] * 0.15f);
                     Handles.color = Color.red;
-                    if (i < data.Points.Count - 1)
-                        Handles.DrawLine(p, data.Points[i + 1]);
+                    if (i < data.SegmentedPoints.Count - 1)
+                        Handles.DrawLine(p, data.SegmentedPoints[i + 1]);
                 }
             }
         }
