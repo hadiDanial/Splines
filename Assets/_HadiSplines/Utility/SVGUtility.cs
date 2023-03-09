@@ -3,6 +3,7 @@ using SVGImporter.Elements.Containers;
 using SVGImporter.Utility;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using UnityEditor;
 using UnityEngine;
 using Path = SVGImporter.Elements.Path;
@@ -48,16 +49,26 @@ namespace Hadi.Splines
             {
                 vectors.Add(PositionTo2DVector(points[i].anchor, splineMode));
                 vectors.Add(PositionTo2DVector(points[i].GetControlPoint2(), splineMode));
-                vectors.Add(PositionTo2DVector(points[i + 1].GetControlPoint2(), splineMode));
-                vectors.Add(PositionTo2DVector(points[i + 1].anchor, splineMode));
+                vectors.Add(PositionTo2DVector(points[i + 1].GetControlPoint1(), splineMode));
             }
-
+            vectors.Add(PositionTo2DVector(points[points.Count - 1].anchor, splineMode));
+            if(spline.IsClosedSpline)
+            {
+                vectors.Add(PositionTo2DVector(points[points.Count - 1].GetControlPoint2(), splineMode));
+                vectors.Add(PositionTo2DVector(points[0].GetControlPoint1(), splineMode));
+                vectors.Add(PositionTo2DVector(points[0].anchor, splineMode));
+            }
             // TODO: Convert points to PathCommands
             SVG svg = Path.CreatePathFromPoints(vectors, PositionTo2DVector(spline.transform.position, splineMode), !spline.UseObjectTransform, spline.IsClosedSpline);
             //Path
             //Element element = SVGFileParser.ReadSVG(File.ReadAllText(path));
-
-            Debug.Log(svg.ToString());
+            StringBuilder stringBuilder = new StringBuilder();
+            foreach (var item in vectors)
+            {
+                stringBuilder.Append(item.ToString());
+                stringBuilder.Append(' ');
+            }
+            Debug.Log(stringBuilder.ToString());
             Debug.Log(svg.ElementToSVGTag());
         }
 
@@ -67,18 +78,18 @@ namespace Hadi.Splines
             switch (splineMode)
             {
                 case SplineMode.XZ:
-                    point = new Vector2(vector3.x, vector3.z);
+                    point = new Vector2(vector3.x, -vector3.z);
                     break;
                 case SplineMode.YZ:
-                    point = new Vector2(vector3.z, vector3.y);
+                    point = new Vector2(vector3.z, -vector3.y);
                     break;
                 case SplineMode.Full3D:
                 case SplineMode.XY:
                 default:
-                    point = new Vector2(vector3.x, vector3.y);
+                    point = new Vector2(vector3.x, -vector3.y);
                     break;
             }
-            return point * splineToSVGScale;
+            return new Vector2(point.x * splineToSVGScale, point.y * splineToSVGScale);
         }
 #endif
     }
