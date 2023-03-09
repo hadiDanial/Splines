@@ -1,10 +1,9 @@
 using System;
 using UnityEngine;
-using static UnityEngine.GraphicsBuffer;
 
 namespace Hadi.Splines
 {
-    [System.Serializable]
+    [Serializable]
     public class Point
     {
         public Vector3 anchor;
