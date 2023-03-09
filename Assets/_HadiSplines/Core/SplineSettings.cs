@@ -18,9 +18,10 @@ namespace Hadi.Splines
         public EndOfSplineInstruction EndOfSplineInstruction = EndOfSplineInstruction.Loop;
         [SerializeField, Range(2, 25), Tooltip("How many segments there are between any two points. This decides the resolution of the spline.")]
         public int segmentsPerCurve = 10;
-
         [SerializeField, Tooltip("Distance between the last point and a newly added point.")]
         public float newPointDistance = 1.75f;
+        [SerializeField, Tooltip("Should the point rotation be automatically calculated to match the tangent of the points?")]
+        public bool automaticPointRotations = true;
 
         public object Clone()
         {

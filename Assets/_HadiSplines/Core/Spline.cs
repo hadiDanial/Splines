@@ -49,6 +49,7 @@ namespace Hadi.Splines
         public float Length { get => SplineData.Length; }
         public bool IsClosedSpline { get => splineSettings.closedSpline; }
         public SplineRendererType RendererType { get => rendererType; }
+        public SplineSettings SplineSettings { get => splineSettings; set => splineSettings = value; }
 
         private void Awake()
         {
@@ -95,7 +96,7 @@ namespace Hadi.Splines
             }
             Vector3 newPointPosition = transform.TransformSplinePoint( position + tangent * splineSettings.newPointDistance, UseObjectTransform);
             Point newPoint = new Point(transform.InverseTransformSplinePoint(newPointPosition, UseObjectTransform), -tangent);
-            //newPoint.rotation = Quaternion.AngleAxis(90, tangent);
+            newPoint.SetAutoRotation();
             SplineData.Points.Add(newPoint);
             GenerateSpline();
         }
@@ -463,6 +464,8 @@ namespace Hadi.Splines
             foreach (Point point in SplineData.Points)
             {
                 point.Refresh(SplineMode);
+                //if (splineSettings.automaticPointRotations)
+                //    point.SetAutoRotation(); 
             }
             bool generate = true;
             if (currentSettings != rendererSettings || splineRenderer == null)

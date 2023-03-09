@@ -203,6 +203,8 @@ namespace Hadi.Splines.Editor
                     }
                     Undo.RecordObject(spline, "Moved Control Point (Spline)");
                     point.UpdateControlPoints(control1, control2);
+                    if (spline.SplineSettings.automaticPointRotations)
+                        point.SetAutoRotation();
                 }
 
                 Handles.color = lineColor;

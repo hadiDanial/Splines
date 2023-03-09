@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using static UnityEngine.GraphicsBuffer;
 
 namespace Hadi.Splines
 {
@@ -130,5 +131,10 @@ namespace Hadi.Splines
 
         public Vector3 GetControlPoint1() => anchor + relativeControlPoint1;
         public Vector3 GetControlPoint2() => anchor + relativeControlPoint2;
+
+        public void SetAutoRotation()
+        {
+            rotation = Quaternion.LookRotation(relativeControlPoint1.normalized);
+        }
     }
 }

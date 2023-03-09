@@ -14,7 +14,6 @@ namespace Hadi.Splines.Editor
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             EditorGUI.BeginProperty(position, label, property);
-            //EditorGUI.BeginChangeCheck();
 
             int indent = EditorGUI.indentLevel;
             EditorGUI.indentLevel = 0;
@@ -26,6 +25,7 @@ namespace Hadi.Splines.Editor
             var endOfSplineInstructionProp = property.FindPropertyRelative("EndOfSplineInstruction");
             var segmentsPerCurveProp = property.FindPropertyRelative("segmentsPerCurve");
             var newPointDistanceProp = property.FindPropertyRelative("newPointDistance");
+            var automaticRotationProp = property.FindPropertyRelative("automaticPointRotations");
 
 
             if (style == null)
@@ -39,34 +39,45 @@ namespace Hadi.Splines.Editor
             position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label, style);
 
             float startYPos = position.y + lineHeight * 1.5f;
-            float lineWidth = EditorGUIUtility.currentViewWidth - 25;
+            float lineWidth = EditorGUIUtility.currentViewWidth - padding * 2f;
 
-            Rect useObjectTransformRect = new Rect(padding, startYPos, lineWidth/2, lineHeight);
-            Rect closedSplineRect = new Rect(padding + lineWidth/2, startYPos, lineWidth/2, lineHeight);
-            Rect splineModeRect = new Rect(padding, startYPos + lineHeight + EditorGUIUtility.standardVerticalSpacing, lineWidth, lineHeight);
-            Rect splineTypeRect = new Rect(padding, startYPos + 2 * lineHeight + 2 * EditorGUIUtility.standardVerticalSpacing, lineWidth, lineHeight);
-            Rect endOfSplineInstructionRect = new Rect(padding, startYPos + 3 * lineHeight + 3 * EditorGUIUtility.standardVerticalSpacing, lineWidth, lineHeight);
-            Rect segmentsPerCurveRect = new Rect(padding, startYPos + 4 * lineHeight + 4 * EditorGUIUtility.standardVerticalSpacing, lineWidth, lineHeight);
-            Rect newPointDistanceRect = new Rect(padding, startYPos + 5 * lineHeight + 5 * EditorGUIUtility.standardVerticalSpacing, lineWidth, lineHeight);
+            Rect useObjectTransformRect = new Rect(padding, startYPos + lineHeight, lineWidth, lineHeight);
+            Rect closedSplineRect = new Rect(padding, startYPos, lineWidth, lineHeight);
+            Rect splineModeRect = new Rect(padding, startYPos + 2 * lineHeight, lineWidth, lineHeight);
+            Rect splineTypeRect = new Rect(padding, startYPos + 3 * lineHeight, lineWidth, lineHeight);
+            Rect endOfSplineInstructionRect = new Rect(padding, startYPos + 4 * lineHeight, lineWidth, lineHeight);
+            Rect segmentsPerCurveRect = new Rect(padding, startYPos + 5 * lineHeight, lineWidth, lineHeight);
+            Rect newPointDistanceRect = new Rect(padding, startYPos + 6 * lineHeight, lineWidth, lineHeight);
+            Rect automaticRotationRect = new Rect(padding, startYPos + 7 * lineHeight, lineWidth, lineHeight);
 
-            EditorGUI.PropertyField(closedSplineRect, closedSplineProp);
+            GUIContent closedSpline = new GUIContent("Closed?");
+            closedSpline.tooltip = closedSplineProp.tooltip;
+            closedSplineRect = EditorGUI.PrefixLabel(closedSplineRect, GUIUtility.GetControlID(FocusType.Passive), closedSpline);
+            //closedSplineRect.width = halfWidth;
+
+            EditorGUI.PropertyField(closedSplineRect, closedSplineProp, GUIContent.none);
             EditorGUI.PropertyField(useObjectTransformRect, useObjectTransformProp);
+
             EditorGUI.PropertyField(splineModeRect, splineModeProp);
             EditorGUI.PropertyField(splineTypeRect, splineTypeProp);
             EditorGUI.PropertyField(endOfSplineInstructionRect, endOfSplineInstructionProp);
             EditorGUI.PropertyField(segmentsPerCurveRect, segmentsPerCurveProp);
             EditorGUI.PropertyField(newPointDistanceRect, newPointDistanceProp);
 
+            GUIContent automaticRotation = new GUIContent("Auto Point Rotation");
+            automaticRotation.tooltip = automaticRotationProp.tooltip;
+            automaticRotationRect = EditorGUI.PrefixLabel(automaticRotationRect, GUIUtility.GetControlID(FocusType.Passive), automaticRotation);
+            automaticRotationRect.width = 50;
+            EditorGUI.PropertyField(automaticRotationRect, automaticRotationProp, GUIContent.none);
+
             EditorGUI.indentLevel = indent;
             EditorGUILayout.Separator();
             EditorGUI.EndProperty();
-            //if (EditorGUI.EndChangeCheck())
-            //    Debug.Log("Change");
         }
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            return EditorGUIUtility.singleLineHeight * 8;
+            return EditorGUIUtility.singleLineHeight * 9;
         }
     }
 }
