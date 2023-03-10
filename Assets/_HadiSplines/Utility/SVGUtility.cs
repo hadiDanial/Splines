@@ -1,6 +1,7 @@
 using SVGImporter.Elements;
 using SVGImporter.Elements.Containers;
 using SVGImporter.Utility;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -38,38 +39,49 @@ namespace Hadi.Splines
             GameObject gameObject = Selection.activeGameObject;
             if (gameObject == null) return;
 
-           Spline spline = gameObject.GetComponent<Spline>();
+            Spline spline = gameObject.GetComponent<Spline>();
             if (spline == null) return;
+            SplineToSVG(spline);
+        }
 
+        public static void SplineToSVG(Spline spline, SplineMode? splineMode = null)
+        {
             List<Point> points = spline.GetPoints();
             List<Vector2> vectors = new List<Vector2>();
+            if(splineMode == null)
+                 splineMode = spline.SplineMode;
+            for (int i = 0; i < points.Count - 1; i++)
+            {
+                vectors.Add(PositionTo2DVector(points[i].anchor, splineMode.Value));
+                vectors.Add(PositionTo2DVector(points[i].GetControlPoint2(), splineMode.Value));
+                vectors.Add(PositionTo2DVector(points[i + 1].GetControlPoint1(), splineMode.Value));
+            }
+            vectors.Add(PositionTo2DVector(points[points.Count - 1].anchor, splineMode.Value));
+            if (spline.IsClosedSpline)
+            {
+                vectors.Add(PositionTo2DVector(points[points.Count - 1].GetControlPoint2(), splineMode.Value));
+                vectors.Add(PositionTo2DVector(points[0].GetControlPoint1(), splineMode.Value));
+                vectors.Add(PositionTo2DVector(points[0].anchor, splineMode.Value));
+            }
 
-            SplineMode splineMode = spline.SplineMode;
-            for(int i = 0; i < points.Count - 1; i++)
-            {
-                vectors.Add(PositionTo2DVector(points[i].anchor, splineMode));
-                vectors.Add(PositionTo2DVector(points[i].GetControlPoint2(), splineMode));
-                vectors.Add(PositionTo2DVector(points[i + 1].GetControlPoint1(), splineMode));
-            }
-            vectors.Add(PositionTo2DVector(points[points.Count - 1].anchor, splineMode));
-            if(spline.IsClosedSpline)
-            {
-                vectors.Add(PositionTo2DVector(points[points.Count - 1].GetControlPoint2(), splineMode));
-                vectors.Add(PositionTo2DVector(points[0].GetControlPoint1(), splineMode));
-                vectors.Add(PositionTo2DVector(points[0].anchor, splineMode));
-            }
-            // TODO: Convert points to PathCommands
-            SVG svg = Path.CreatePathFromPoints(vectors, PositionTo2DVector(spline.transform.position, splineMode), !spline.UseObjectTransform, spline.IsClosedSpline);
-            //Path
-            //Element element = SVGFileParser.ReadSVG(File.ReadAllText(path));
+            SVG svg = Path.CreatePathFromPoints(vectors, PositionTo2DVector(spline.transform.position, splineMode.Value), !spline.UseObjectTransform, spline.IsClosedSpline);
             StringBuilder stringBuilder = new StringBuilder();
             foreach (var item in vectors)
             {
                 stringBuilder.Append(item.ToString());
                 stringBuilder.Append(' ');
             }
-            Debug.Log(stringBuilder.ToString());
-            Debug.Log(svg.ElementToSVGTag());
+
+            string folderPath = $"{Application.dataPath}/Exported SVGs";
+            if (!Directory.Exists(folderPath))
+                CreateFolder(folderPath);
+            File.WriteAllText($"{folderPath}/{spline.gameObject.name}_{splineMode.Value}_{DateTime.Now.ToString("yyyy_dd_M-HH_mm_ss")}.svg", svg.ElementToSVGTag());
+            AssetDatabase.Refresh();
+        }
+
+        private static void CreateFolder(string folderPath)
+        {            
+            Directory.CreateDirectory(folderPath);
         }
 
         private static Vector2 PositionTo2DVector(Vector3 vector3, SplineMode splineMode)

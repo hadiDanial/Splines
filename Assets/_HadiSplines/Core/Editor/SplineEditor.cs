@@ -21,6 +21,8 @@ namespace Hadi.Splines.Editor
         private Vector3 pointTangent;
         private Spline spline;
         private List<Point> points;
+        private SplineMode exportMode = SplineMode.Full3D;
+        private GUILayoutOption[] options = new GUILayoutOption[] { GUILayout.ExpandWidth(false), GUILayout.Width(80) };
 
         private void OnEnable()
         {
@@ -64,6 +66,13 @@ namespace Hadi.Splines.Editor
                     Reset();
                 }
             }
+            EditorGUILayout.BeginHorizontal();
+            exportMode = (SplineMode)EditorGUILayout.EnumPopup(exportMode, options);
+            if(GUILayout.Button("Export SVG"))
+            {
+                SVGUtility.SplineToSVG(spline, exportMode);
+            }
+            EditorGUILayout.EndHorizontal(); 
             base.OnInspectorGUI();
         }
 
