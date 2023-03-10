@@ -1,3 +1,4 @@
+using SVGImporter.Elements;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -38,24 +39,29 @@ namespace Hadi.Splines
         private Vector3 previousLocalScale;
         private ISplineRenderer splineRenderer;
         private RendererSettings currentSettings;
-
+        private Element element;
 
         public float ANCHOR_SIZE { get => anchorSize; }
         public float CONTROL_SIZE { get => controlSize; }
-        public SplineData SplineData { get => splineData; private set => splineData = value; }
+        public SplineData SplineData { get => splineData; set => splineData = value; }
         public bool DrawGizmos { get => drawGizmos; }
-        public bool UseObjectTransform { get => splineSettings.useObjectTransform; }
+        public bool UseObjectTransform { get => splineSettings.useObjectTransform; set => splineSettings.useObjectTransform = value; }
         public SplineMode SplineMode { get => splineSettings.splineMode; private set => splineSettings.splineMode = value; }
         public float Length { get => SplineData.Length; }
-        public bool IsClosedSpline { get => splineSettings.closedSpline; }
+        public bool IsClosedSpline { get => splineSettings.closedSpline; set => splineSettings.closedSpline = value; }
         public SplineRendererType RendererType { get => rendererType; }
         public SplineSettings SplineSettings { get => splineSettings; set => splineSettings = value; }
+        public RendererSettings RendererSettings { get => rendererSettings; set => rendererSettings = value; }
 
         private void Awake()
         {
             if(SplineData == null)
             {
                 SplineData = new SplineData();
+            }
+            if(splineSettings == null)
+            {
+                splineSettings = new SplineSettings();
             }
             SplineData.objectTransform = transform;
             SplineData.useObjectTransform = splineSettings.useObjectTransform;
@@ -497,6 +503,19 @@ namespace Hadi.Splines
             if(generate)
                 GenerateSpline();
 #endif
+        }
+
+        internal void SetByElement(Element element, List<Point> points, RendererSettings defaultRendererSettings)
+        {
+            this.element = element;
+            splineData.Points = points;
+            rendererSettings = defaultRendererSettings;
+            currentSettings = rendererSettings;
+            splineData.settings = rendererSettings;
+            if (points.Count == 0)
+                ResetSpline();
+            else
+                Refresh();
         }
     }
 }

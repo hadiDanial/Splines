@@ -14,23 +14,28 @@ namespace Hadi.Splines
 {
     public class SVGUtility
     {
-        private const float splineToSVGScale = 100;
+        public const float splineToSVGScale = 100;
+        public const float svgToSplineScale = 0.01f;
+
         private const string extension = ".svg";
 #if UNITY_EDITOR
         [MenuItem("Splines/SVGs/Read File")]
-        public static void ReadSVG()
+        public static Element ReadSVG()
         {
             string[] guids = Selection.assetGUIDs;
-            if (guids == null || guids.Length == 0) return;
+            if (guids == null || guids.Length == 0) return null;
 
             string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-            if (path == null || !path.ToLower().EndsWith(extension)) return;
+            if (path == null || !path.ToLower().EndsWith(extension)) return null;
 
+            return ReadSVG(File.ReadAllText(path));
+        }
 
-            Element element = SVGFileParser.ReadSVG(File.ReadAllText(path));
-
-            Debug.Log(element.ToString());
-
+        public static Element ReadSVG(string svgText)
+        {
+            Element element = SVGFileParser.ReadSVG(svgText);
+            //Debug.Log(element.ToString());
+            return element;
         }
 
         [MenuItem("Splines/SVGs/Spline to SVG")]
