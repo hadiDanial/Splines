@@ -17,6 +17,7 @@ namespace Hadi.Splines.Editor
             
         Vector3 anchor, control1, control2;
         Quaternion rotation;
+        Vector3 scale;
         private int? pickedHandle;
         private Vector3 pointTangent;
         private Spline spline;
@@ -162,10 +163,20 @@ namespace Hadi.Splines.Editor
                 EditorGUI.BeginChangeCheck();
                 Point point = points[pickedHandle.Value];
                 Vector3 handlePos = spline.transform.TransformSplinePoint(point.anchor, spline.UseObjectTransform);
-               
-                anchor = Handles.PositionHandle(handlePos, handleRotation);
+                switch (Tools.current)
+                {                        
+                    case Tool.Rotate:
+                    rotation = Handles.RotationHandle(point.rotation, handlePos);
+                        break;
+                    case Tool.Scale:
+                        scale = Handles.ScaleHandle(point.scale, handlePos, handleRotation);
+                        break;                 
+                    case Tool.Move:
+                    default:
+                    anchor = Handles.PositionHandle(handlePos, handleRotation);
+                        break;
+                }
                 //rotation = Handles.Disc(point.rotation, handlePos, pointTangent, 0.4f, false, 1);
-                rotation = Handles.RotationHandle(point.rotation, handlePos);
 
                 if (EditorGUI.EndChangeCheck())
                 {
@@ -175,7 +186,7 @@ namespace Hadi.Splines.Editor
                         anchor = spline.transform.InverseTransformPoint(anchor);
                     }
                     Undo.RecordObject(spline, "Modified Anchor (Spline)");
-                    point.UpdateAnchor(anchor, rotation);
+                    point.UpdateAnchor(anchor, rotation, scale);
                 }
 
                 EditorGUI.BeginChangeCheck();

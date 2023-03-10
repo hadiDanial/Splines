@@ -111,10 +111,11 @@ namespace Hadi.Splines
             relativeControlPoint2 = -relativeControlPoint1;
         }
 
-        public void UpdateAnchor(Vector3 anchor, Quaternion rotation)
+        public void UpdateAnchor(Vector3 anchor, Quaternion rotation, Vector3 scale)
         {
             this.anchor = anchor;
             this.rotation = rotation;
+            this.scale = scale;
         }
 
         public void UpdateControlPoints(Vector3 control1, Vector3 control2)
