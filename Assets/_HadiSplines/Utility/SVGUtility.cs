@@ -52,16 +52,16 @@ namespace Hadi.Splines
                  splineMode = spline.SplineMode;
             for (int i = 0; i < points.Count - 1; i++)
             {
-                vectors.Add(PositionTo2DVector(points[i].anchor, splineMode.Value));
-                vectors.Add(PositionTo2DVector(points[i].GetControlPoint2(), splineMode.Value));
-                vectors.Add(PositionTo2DVector(points[i + 1].GetControlPoint1(), splineMode.Value));
+                vectors.Add(PositionTo2DVector(spline.transform.TransformSplinePoint(points[i].anchor, spline.UseObjectTransform), splineMode.Value));
+                vectors.Add(PositionTo2DVector(spline.transform.TransformSplinePoint(points[i].GetControlPoint2(), spline.UseObjectTransform), splineMode.Value));
+                vectors.Add(PositionTo2DVector(spline.transform.TransformSplinePoint(points[i + 1].GetControlPoint1(), spline.UseObjectTransform), splineMode.Value));
             }
-            vectors.Add(PositionTo2DVector(points[points.Count - 1].anchor, splineMode.Value));
+            vectors.Add(PositionTo2DVector(spline.transform.TransformSplinePoint(points[points.Count - 1].anchor, spline.UseObjectTransform), splineMode.Value));
             if (spline.IsClosedSpline)
             {
-                vectors.Add(PositionTo2DVector(points[points.Count - 1].GetControlPoint2(), splineMode.Value));
-                vectors.Add(PositionTo2DVector(points[0].GetControlPoint1(), splineMode.Value));
-                vectors.Add(PositionTo2DVector(points[0].anchor, splineMode.Value));
+                vectors.Add(PositionTo2DVector(spline.transform.TransformSplinePoint(points[points.Count - 1].GetControlPoint2(), spline.UseObjectTransform), splineMode.Value));
+                vectors.Add(PositionTo2DVector(spline.transform.TransformSplinePoint(points[0].GetControlPoint1(), spline.UseObjectTransform), splineMode.Value));
+                vectors.Add(PositionTo2DVector(spline.transform.TransformSplinePoint(points[0].anchor, spline.UseObjectTransform), splineMode.Value));
             }
 
             SVG svg = Path.CreatePathFromPoints(vectors, PositionTo2DVector(spline.transform.position, splineMode.Value), !spline.UseObjectTransform, spline.IsClosedSpline);
