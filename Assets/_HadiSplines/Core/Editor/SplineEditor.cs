@@ -38,6 +38,7 @@ namespace Hadi.Splines.Editor
             spline = (target as Spline);
             points = spline.GetPoints();
             pickedHandle = null;
+            exportMode = spline.SplineMode;
         }
 
         public override void OnInspectorGUI()
