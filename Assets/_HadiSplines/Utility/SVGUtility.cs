@@ -48,35 +48,45 @@ namespace Hadi.Splines
         {
             List<Point> points = spline.GetPoints();
             List<Vector2> vectors = new List<Vector2>();
-            if(splineMode == null)
-                 splineMode = spline.SplineMode;
+            if (splineMode == null)
+                splineMode = spline.SplineMode;
+            bool useObjectTransform = spline.UseObjectTransform;
+            SplineMode mode = splineMode.Value;
+            Transform transform = spline.transform;
+
             for (int i = 0; i < points.Count - 1; i++)
             {
-                vectors.Add(PositionTo2DVector(spline.transform.TransformSplinePoint(points[i].anchor, spline.UseObjectTransform), splineMode.Value));
-                vectors.Add(PositionTo2DVector(spline.transform.TransformSplinePoint(points[i].GetControlPoint2(), spline.UseObjectTransform), splineMode.Value));
-                vectors.Add(PositionTo2DVector(spline.transform.TransformSplinePoint(points[i + 1].GetControlPoint1(), spline.UseObjectTransform), splineMode.Value));
+                vectors.Add(PositionTo2DVector(transform.TransformSplinePoint(points[i].anchor, useObjectTransform), mode));
+                vectors.Add(PositionTo2DVector(transform.TransformSplinePoint(points[i].GetControlPoint2(), useObjectTransform), mode));
+                vectors.Add(PositionTo2DVector(transform.TransformSplinePoint(points[i + 1].GetControlPoint1(), useObjectTransform), mode));
             }
-            vectors.Add(PositionTo2DVector(spline.transform.TransformSplinePoint(points[points.Count - 1].anchor, spline.UseObjectTransform), splineMode.Value));
+            vectors.Add(PositionTo2DVector(transform.TransformSplinePoint(points[points.Count - 1].anchor, useObjectTransform), mode));
+
             if (spline.IsClosedSpline)
             {
-                vectors.Add(PositionTo2DVector(spline.transform.TransformSplinePoint(points[points.Count - 1].GetControlPoint2(), spline.UseObjectTransform), splineMode.Value));
-                vectors.Add(PositionTo2DVector(spline.transform.TransformSplinePoint(points[0].GetControlPoint1(), spline.UseObjectTransform), splineMode.Value));
-                vectors.Add(PositionTo2DVector(spline.transform.TransformSplinePoint(points[0].anchor, spline.UseObjectTransform), splineMode.Value));
+                vectors.Add(PositionTo2DVector(transform.TransformSplinePoint(points[points.Count - 1].GetControlPoint2(), useObjectTransform), mode));
+                vectors.Add(PositionTo2DVector(transform.TransformSplinePoint(points[0].GetControlPoint1(), useObjectTransform), mode));
+                vectors.Add(PositionTo2DVector(transform.TransformSplinePoint(points[0].anchor, useObjectTransform), mode));
             }
 
             SVG svg = Path.CreatePathFromPoints(vectors, PositionTo2DVector(spline.transform.position, splineMode.Value), !spline.UseObjectTransform, spline.IsClosedSpline);
+            //PrintVectorList(vectors);
+            string folderPath = $"{Application.dataPath}/Exported SVGs";
+            if (!Directory.Exists(folderPath))
+                CreateFolder(folderPath);
+            File.WriteAllText($"{folderPath}/{spline.gameObject.name}_{splineMode.Value}_{DateTime.Now.ToString("yyyy_dd_M-HH_mm_ss")}.svg", svg.ElementToSVGTag());
+            AssetDatabase.Refresh();
+        }
+
+        private static void PrintVectorList(List<Vector2> vectors)
+        {
             StringBuilder stringBuilder = new StringBuilder();
             foreach (var item in vectors)
             {
                 stringBuilder.Append(item.ToString());
                 stringBuilder.Append(' ');
             }
-
-            string folderPath = $"{Application.dataPath}/Exported SVGs";
-            if (!Directory.Exists(folderPath))
-                CreateFolder(folderPath);
-            File.WriteAllText($"{folderPath}/{spline.gameObject.name}_{splineMode.Value}_{DateTime.Now.ToString("yyyy_dd_M-HH_mm_ss")}.svg", svg.ElementToSVGTag());
-            AssetDatabase.Refresh();
+            Debug.Log(stringBuilder.ToString());
         }
 
         private static void CreateFolder(string folderPath)
