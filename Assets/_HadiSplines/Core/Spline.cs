@@ -512,7 +512,7 @@ namespace Hadi.Splines
             rendererSettings = defaultRendererSettings;
             currentSettings = rendererSettings;
             splineData.settings = rendererSettings;
-            if (points.Count == 0)
+            if (points.Count < 2)
                 ResetSpline();
             else
                 Refresh();
