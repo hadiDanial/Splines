@@ -9,6 +9,9 @@ using MyVector2 = SVGImporter.Utility.Vector2;
 using Vector2 = UnityEngine.Vector2;
 using Rect = SVGImporter.Elements.Rect;
 using System.Numerics;
+using SVGImporter.Elements.PathUtility;
+using static UnityEngine.UI.ScrollRect;
+using static SVGImporter.Elements.PathUtility.SimpleMoveCommand;
 
 namespace Hadi.Splines
 {
@@ -107,10 +110,63 @@ namespace Hadi.Splines
 
         private void GeneratePath(Path element)
         {
+            List<List<Point>> listOfPointLists = new List<List<Point>>();
+            List<Point> currentPointList = new List<Point>();
+            Vector2 currentPosition = Vector2.zero;
+            Vector2 tempPos = Vector2.zero;
             foreach (var command in element.PathCommands)
             {
-                
+                switch (command)
+                {
+                    case ClosePathCommand closePath:
+                        spline.IsClosedSpline = true; 
+                        break;
+                    case MoveCommand moveCommad:
+                        currentPointList = new List<Point>();
+                        listOfPointLists.Add(currentPointList);
+                        tempPos = MyVector2ToVector2(moveCommad.Point);
+                        currentPosition = UpdateCurrentPosition(currentPosition, moveCommad.IsAbsolute, tempPos);
+                        currentPointList.Add(new Point(currentPosition, Vector2.zero));
+                        break;
+                    case LineCommand lineCommand:
+                        tempPos = MyVector2ToVector2(lineCommand.Point);
+                        currentPosition = UpdateCurrentPosition(currentPosition, lineCommand.IsAbsolute, tempPos);
+                        points.Add(new Point(currentPosition, Vector2.zero));
+                        break;
+                    case SimpleMoveCommand simpleMoveCommad:
+                        tempPos = simpleMoveCommad.MovementType == SimpleMoveType.Horizontal ? new Vector2(simpleMoveCommad.Value, 0) : new Vector2(0, -simpleMoveCommad.Value);
+                        currentPosition = UpdateCurrentPosition(currentPosition, simpleMoveCommad.IsAbsolute, tempPos); 
+                        points.Add((new Point(currentPosition, Vector2.zero)));
+                        break;
+                    case ArcCommand arcCommad:
+                        break;
+                    case CubicCurveCommand ccCommad:
+                        break;
+                    case CubicCurveContinueCommand ccContinueCommad:
+                        break;
+                    case QuadraticCurveCommand qcCommad:
+                        break;
+                    case QuadraticCurveContinueCommand qcContinueCommad:
+                        break;
+                    default:
+                        break;
+                }
             }
+            points = currentPointList;
+        }
+
+        private static Vector2 UpdateCurrentPosition(Vector2 currentPos, bool isAbsolute, Vector2 newPosition)
+        {
+            if (isAbsolute)
+                currentPos = newPosition;
+            else
+                currentPos += newPosition;
+            return currentPos;
+        }
+
+        private static Vector2 MyVector2ToVector2(MyVector2 position)
+        {
+            return new Vector2(position.x, -position.y); // -y because SVG y-coordinates start from the top
         }
 
         private void GeneratePolygon(Polygon element)
@@ -121,9 +177,10 @@ namespace Hadi.Splines
 
         private void GenerateRect(Rect element)
         {
-            transform.localPosition = new Vector2(element.Position.x, element.Position.y);
-            points = SplineShapesUtility.Rect(new Vector2(element.Size.x, element.Size.y));
+            transform.localPosition = MyVector2ToVector2(element.Position) +Vector2.down * element.Size.y / 2 + Vector2.right * element.Position.x;
+            points = SplineShapesUtility.Rect(MyVector2ToVector2(element.Size));
             spline.IsClosedSpline = true;
+            spline.UseObjectTransform = true;
         }
 
         private void GeneratePolyline(Polyline element)
@@ -131,7 +188,7 @@ namespace Hadi.Splines
             List<Vector2> linePoints = new List<Vector2>();
             foreach (var item in element.Points)
             {
-                linePoints.Add(new Vector2(item.x, item.y));
+                linePoints.Add(MyVector2ToVector2(item));
             }
             points = SplineShapesUtility.Polyline(linePoints);
         }
@@ -140,22 +197,24 @@ namespace Hadi.Splines
         {
             MyVector2 center = element.Point1 + element.Point2;
             center = center / 2;
-            transform.localPosition = new Vector2(center.x, center.y);
+            transform.localPosition = MyVector2ToVector2(center);
             points = SplineShapesUtility.Line(element.Point1.x, element.Point1.y, element.Point2.x, element.Point2.y);
         }
 
         private void GenerateEllipseSpline(Ellipse element)
         {
-            transform.localPosition = new Vector2(element.Center.x, element.Center.y);
+            transform.localPosition = MyVector2ToVector2(element.Center);
             points = SplineShapesUtility.Ellipse(element.Radius.x, element.Radius.y);
             spline.IsClosedSpline = true;
+            spline.UseObjectTransform = true;
         }
 
         private void GenerateCircleSpline(Circle element)
         {
-            transform.localPosition = new Vector2(element.Center.x, element.Center.y);
+            transform.localPosition = MyVector2ToVector2(element.Center);
             points = SplineShapesUtility.Circle(element.Radius);
             spline.IsClosedSpline = true;
+            spline.UseObjectTransform = true;
         }
     }
 }
