@@ -44,12 +44,17 @@ namespace Hadi.Splines
 
         public static List<Point> Rect(Vector2 size)
         {
+            return Rect(size, Vector2.zero);
+        }
+
+        public static List<Point> Rect(Vector2 size, Vector2 origin)
+        {
             List<Point> points = new List<Point>();
             float w = size.x / 2, h = size.y / 2;
-            Vector2 tr = new Vector2(w, h);
-            Vector2 br = new Vector2(w, -h);
-            Vector2 bl = new Vector2(-w, -h);
-            Vector2 tl = new Vector2(-w, h);
+            Vector2 tr = new Vector2(w, h) + origin;
+            Vector2 br = new Vector2(w, -h) + origin;
+            Vector2 bl = new Vector2(-w, -h) + origin;
+            Vector2 tl = new Vector2(-w, h) + origin;
             Point P1 = new Point(tr, Vector2.zero);
             P1.rotation = Quaternion.Euler(0, 0, -45);
             Point P2 = new Point(br, Vector2.zero);
@@ -65,7 +70,6 @@ namespace Hadi.Splines
             points.Add(P4);
             return points;
         }
-
         private static List<Point> Circle()
         {
             return Circle(1);

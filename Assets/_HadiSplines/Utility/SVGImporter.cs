@@ -1,16 +1,11 @@
 using SVGImporter.Elements;
 using SVGImporter.Elements.Containers;
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using SVGImporter.Utility;
 using MyVector2 = SVGImporter.Utility.Vector2;
 using Vector2 = UnityEngine.Vector2;
 using Rect = SVGImporter.Elements.Rect;
-using System.Numerics;
 using SVGImporter.Elements.PathUtility;
-using static UnityEngine.UI.ScrollRect;
 using static SVGImporter.Elements.PathUtility.SimpleMoveCommand;
 
 namespace Hadi.Splines
@@ -41,6 +36,8 @@ namespace Hadi.Splines
                     useObjectTransform = true;
                 }
             }
+            element.Transform.ApplyTo(transform);
+
             Import();
         }
 
@@ -177,8 +174,8 @@ namespace Hadi.Splines
 
         private void GenerateRect(Rect element)
         {
-            transform.localPosition = MyVector2ToVector2(element.Position) +Vector2.down * element.Size.y / 2 + Vector2.right * element.Position.x;
-            points = SplineShapesUtility.Rect(MyVector2ToVector2(element.Size));
+            //transform.localPosition = MyVector2ToVector2(element.Position) +Vector2.down * element.Size.y / 2 + Vector2.right * element.Position.x;
+            points = SplineShapesUtility.Rect(MyVector2ToVector2(element.Size), MyVector2ToVector2(element.Position));
             spline.IsClosedSpline = true;
             spline.UseObjectTransform = true;
         }
