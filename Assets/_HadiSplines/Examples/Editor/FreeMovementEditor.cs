@@ -2,6 +2,7 @@ using UnityEditor;
 
 namespace Hadi.Splines
 {
+#if UNITY_EDITOR
     [CustomEditor(typeof(FreeMovement))]
     public class FreeMovementEditor : SplineMoverEditor
     {
@@ -16,4 +17,5 @@ namespace Hadi.Splines
 
         }
     }
+#endif
 }

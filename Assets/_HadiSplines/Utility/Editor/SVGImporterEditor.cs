@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace Hadi.Splines
 {
+#if UNITY_EDITOR
     [CustomEditor(typeof(SVGImporter))]
 
     public class SVGImporterEditor : Editor
@@ -18,17 +19,18 @@ namespace Hadi.Splines
         }
         public override void OnInspectorGUI()
         {
-            if (GUILayout.Button("Load From Selected File"))
-            {
-                Undo.RegisterFullObjectHierarchyUndo(importer.gameObject, "Import SVG");
-                importer.SetElement(SVGUtility.ReadSVG());
-            }
-            base.OnInspectorGUI();
+            // if (GUILayout.Button("Load From Selected File"))
+            // {
+            //     Undo.RegisterFullObjectHierarchyUndo(importer.gameObject, "Import SVG");
+            //     importer.SetElement(SVGUtility.ReadSVG());
+            // }
             if (GUILayout.Button("Load From Text"))
             {
                 Undo.RegisterFullObjectHierarchyUndo(importer.gameObject, "Import SVG");
                 importer.SetElement(SVGUtility.ReadSVG(importer.SvgCode));
             }
+            base.OnInspectorGUI();
         }
     }
+#endif
 }
