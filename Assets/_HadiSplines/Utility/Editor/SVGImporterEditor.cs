@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Numerics;
 using UnityEditor;
 using UnityEngine;
+using Quaternion = UnityEngine.Quaternion;
+using Vector3 = UnityEngine.Vector3;
 
 namespace Hadi.Splines
 {
@@ -28,6 +30,18 @@ namespace Hadi.Splines
             {
                 Undo.RegisterFullObjectHierarchyUndo(importer.gameObject, "Import SVG");
                 importer.SetElement(SVGUtility.ReadSVG(importer.SvgCode));
+            }
+            if (GUILayout.Button("Delete Children and Reset"))
+            {
+                Undo.RegisterFullObjectHierarchyUndo(importer.gameObject, "Reset SVG Importer");
+                Transform importerTransform = importer.transform;
+                for (int i = importerTransform.childCount - 1; i >= 0; i--)
+                {
+                    DestroyImmediate(importerTransform.GetChild(i).gameObject);
+                }
+                importerTransform.position = Vector3.zero;
+                importerTransform.localScale = Vector3.one;
+                importerTransform.rotation = Quaternion.identity;
             }
             base.OnInspectorGUI();
         }
