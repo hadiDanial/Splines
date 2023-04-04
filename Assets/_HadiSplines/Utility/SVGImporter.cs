@@ -45,11 +45,26 @@ namespace Hadi.Splines
         {
             if (Element.IsContainer(element.GetTagType()))
             {
+                Transform parentTransform = transform;
+                if (transform.childCount > 0)
+                {
+                    parentTransform = (new GameObject(element.ElementName)).transform;
+                    parentTransform.SetParent(transform.parent);
+                }
+                else
+                {
+                    transform.rotation = Quaternion.identity;
+                    transform.position = Vector3.zero;
+                    transform.localScale = Vector3.one;
+                }
+
+                element.Transform.ApplyTo(parentTransform);
+
                 ParentElement parent = (ParentElement)element;
                 foreach (var item in parent.Children)
                 {
                     GameObject child = new GameObject(item.ElementName);
-                    child.transform.SetParent(transform);
+                    child.transform.SetParent(parentTransform);
                     SVGImporter childImporter = child.AddComponent<SVGImporter>();
                     childImporter.defaultRendererSettings = defaultRendererSettings;
                     childImporter.svgToSplineScale = svgToSplineScale;
@@ -60,6 +75,7 @@ namespace Hadi.Splines
             {
                 type = element.GetTagType();
                 spline = gameObject.AddComponent<Spline>();
+                transform.localPosition = Vector3.zero;
                 spline.SplineData = new SplineData();
                 spline.UseObjectTransform = useObjectTransform;
                 spline.RendererSettings = defaultRendererSettings;
@@ -179,20 +195,6 @@ namespace Hadi.Splines
             points = currentPointList;
         }
 
-        private static Vector2 UpdateCurrentPosition(Vector2 currentPos, bool isAbsolute, Vector2 newPosition)
-        {
-            if (isAbsolute)
-                currentPos = newPosition;
-            else
-                currentPos += newPosition;
-            return currentPos;
-        }
-
-        private static Vector2 MyVector2ToVector2(MyVector2 position)
-        {
-            return new Vector2(position.x, -position.y); // -y because SVG y-coordinates start from the top
-        }
-
         private void GeneratePolygon(Polygon element)
         {
             GeneratePolyline(element);
@@ -202,7 +204,11 @@ namespace Hadi.Splines
         private void GenerateRect(Rect element)
         {
             //transform.localPosition = MyVector2ToVector2(element.Position) +Vector2.down * element.Size.y / 2 + Vector2.right * element.Position.x;
-            points = SplineShapesUtility.Rect(MyVector2ToVector2(element.Size) * svgToSplineScale, MyVector2ToVector2(element.Position) * svgToSplineScale);
+            Vector2 size = MyVector2ToVector2(element.Size);
+            Vector2 position = MyVector2ToVector2(element.Position);
+            transform.Translate(position, Space.Self);
+            Vector2 origin = (position - Vector2.down * size.y / 2f + Vector2.right * size.x / 2f) - (Vector2)transform.localPosition;
+            points = SplineShapesUtility.Rect(size * svgToSplineScale, origin * svgToSplineScale);
             spline.IsClosedSpline = true;
             spline.UseObjectTransform = true;
         }
@@ -228,6 +234,7 @@ namespace Hadi.Splines
         private void GenerateEllipseSpline(Ellipse element)
         {
             //transform.localPosition = MyVector2ToVector2(element.Center);
+            transform.Translate(MyVector2ToVector2(element.Center), Space.Self);
             points = SplineShapesUtility.Ellipse(element.Radius.x * svgToSplineScale, element.Radius.y * svgToSplineScale);
             spline.IsClosedSpline = true;
             spline.UseObjectTransform = true;
@@ -236,9 +243,26 @@ namespace Hadi.Splines
         private void GenerateCircleSpline(Circle element)
         {
             //transform.localPosition = MyVector2ToVector2(element.Center);
+            transform.Translate(MyVector2ToVector2(element.Center), Space.Self);
             points = SplineShapesUtility.Circle(element.Radius * svgToSplineScale);
             spline.IsClosedSpline = true;
             spline.UseObjectTransform = true;
         }
+        
+        
+        private static Vector2 UpdateCurrentPosition(Vector2 currentPos, bool isAbsolute, Vector2 newPosition)
+        {
+            if (isAbsolute)
+                currentPos = newPosition;
+            else
+                currentPos += newPosition;
+            return currentPos;
+        }
+
+        private static Vector2 MyVector2ToVector2(MyVector2 position)
+        {
+            return new Vector2(position.x, -position.y); // -y because SVG y-coordinates start from the top
+        }
+
     }
 }
