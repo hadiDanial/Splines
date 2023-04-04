@@ -43,6 +43,11 @@ namespace Hadi.Splines
         protected MeshRenderer meshRenderer;
         protected AnimationCurve previousWidthOverSpline, previousHeightOverSpline;
 
+#if UNITY_EDITOR
+        private bool editorDelay;
+#endif
+        
+
         private void Awake()
         {
             SetupMesh();
@@ -210,11 +215,25 @@ namespace Hadi.Splines
 
             }
 #if UNITY_EDITOR
-            UnityEditor.EditorApplication.delayCall += () =>
+            if (!editorDelay)
             {
-                Clear();
-                GenerateMesh();
-            };
+                editorDelay = true;
+                UnityEditor.EditorApplication.delayCall += ClearAndRegenerate;
+            }
+#endif
+        }
+
+        private void ClearAndRegenerate()
+        {
+            Clear();
+            GenerateMesh();
+        }
+
+        private void OnDestroy()
+        {
+#if UNITY_EDITOR
+            if(editorDelay)
+                UnityEditor.EditorApplication.delayCall -=  ClearAndRegenerate;
 #endif
         }
 

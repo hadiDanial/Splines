@@ -68,7 +68,9 @@ namespace Hadi.Splines
 
         public void Clear()
         {
-            this.lineRenderer.positionCount = 0;
+            if(lineRenderer == null) 
+                InitializeLineRenderer();
+            lineRenderer.positionCount = 0;
         }
 
         public void Destroy()
