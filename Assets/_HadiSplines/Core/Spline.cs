@@ -89,18 +89,26 @@ namespace Hadi.Splines
         public void AddPoint()
         {
             Vector3 tangent, position;
+            float distance = splineSettings.newPointDistance;
             if (SplineData.Points.Count > 1)
             {
                 Point lastPoint = SplineData.Points[SplineData.Points.Count - 1];
                 tangent = lastPoint.relativeControlPoint2.normalized;
                 position = lastPoint.anchor;
+                if (tangent == Vector3.zero)
+                {
+                    tangent = lastPoint.anchor -  SplineData.Points[SplineData.Points.Count - 2].anchor;
+                    distance = 1;
+                }
             }
             else
             {
                 tangent = Vector3.right;
                 position = Vector3.zero;
             }
-            Vector3 newPointPosition = transform.TransformSplinePoint( position + tangent * splineSettings.newPointDistance, UseObjectTransform);
+
+            
+            Vector3 newPointPosition = transform.TransformSplinePoint( position + tangent * distance, UseObjectTransform);
             Point newPoint = new Point(transform.InverseTransformSplinePoint(newPointPosition, UseObjectTransform), -tangent);
             newPoint.SetAutoRotation();
             SplineData.Points.Add(newPoint);
@@ -512,9 +520,7 @@ namespace Hadi.Splines
             rendererSettings = defaultRendererSettings;
             currentSettings = rendererSettings;
             splineData.settings = rendererSettings;
-            if (points.Count < 2)
-                ResetSpline();
-            else
+            
                 Refresh();
         }
     }
