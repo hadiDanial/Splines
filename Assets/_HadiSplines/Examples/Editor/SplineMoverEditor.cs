@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEditor;
 namespace Hadi.Splines
 {
+#if UNITY_EDITOR
     [CustomEditor(typeof(SplineMover))]
     public class SplineMoverEditor : Editor
     {
@@ -38,4 +39,5 @@ namespace Hadi.Splines
             EditorGUILayout.LabelField($"Is Moving: {splineMover.IsMoving}");
         }
     }
+#endif
 }

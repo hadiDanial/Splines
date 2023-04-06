@@ -30,15 +30,15 @@ namespace Hadi.Splines
             float angleDelta = 360f / currentMeshResolution;
             float t;
             bool useObjectTransform = splineData.useObjectTransform;
-            for (int i = 0; i < splineData.Points.Count; i++)
+            for (int i = 0; i < splineData.SegmentedPoints.Count; i++)
             {
                 bool hasZeroRadius = false;
-                if (capSides && (i == 0 || i == splineData.Points.Count - 1))
+                if (capSides && (i == 0 || i == splineData.SegmentedPoints.Count - 1))
                 {
                     hasZeroRadius = true;
                 }
                 angle = 0;
-                t = (float)i / splineData.Points.Count;
+                t = (float)i / splineData.SegmentedPoints.Count;
                 for (int j = 0; j < currentMeshResolution; j++)
                 {
                     Vector3 rotatedPosition;
@@ -55,7 +55,7 @@ namespace Hadi.Splines
                         }
                         else rotatedPosition *= currentRadius;
                     }
-                    vertices[i * currentMeshResolution + j] = transform.InverseTransformSplinePoint(rotatedPosition + splineData.Points[i], useObjectTransform) ;
+                    vertices[i * currentMeshResolution + j] = transform.InverseTransformSplinePoint(rotatedPosition + splineData.SegmentedPoints[i], useObjectTransform) ;
                     angle += (angleDelta);
                 }
             }
@@ -64,7 +64,7 @@ namespace Hadi.Splines
         protected override void GenerateTriangles(int numPoints)
         {
             base.GenerateTriangles(numPoints);
-            for (int i = 0, triangleIndex = 0; i < splineData.Points.Count - 1; i++)
+            for (int i = 0, triangleIndex = 0; i < splineData.SegmentedPoints.Count - 1; i++)
             {
                 int vertexIndex, startIndex;
                 for (int j = 0; j < currentMeshResolution - 1; j++, triangleIndex += 6)
@@ -96,9 +96,9 @@ namespace Hadi.Splines
             for (int j = 0; j < currentMeshResolution; j++)
             {
                 float verticalT = ((float)j / (currentMeshResolution - 1));
-                for (int i = 0; i < splineData.Points.Count; i++)
+                for (int i = 0; i < splineData.SegmentedPoints.Count; i++)
                 {
-                    float horizontalT, t = ((float)i / (splineData.Points.Count - 1)); ;
+                    float horizontalT, t = ((float)i / (splineData.SegmentedPoints.Count - 1)); ;
                     switch (settings.UVGenerationType)
                     {
                         case UVGenerationType.Mesh:
@@ -108,9 +108,9 @@ namespace Hadi.Splines
                             }
                         case UVGenerationType.Segment:
                             {
-                                float initT = t * splineData.Points.Count;
+                                float initT = t * splineData.SegmentedPoints.Count;
                                 int segmentIndex = Mathf.FloorToInt(initT);
-                                float nextT = (segmentIndex + 1f) / splineData.Points.Count;
+                                float nextT = (segmentIndex + 1f) / splineData.SegmentedPoints.Count;
                                 horizontalT = (t - initT) / (nextT - initT);
                                 break;
                             }

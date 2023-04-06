@@ -43,6 +43,11 @@ namespace Hadi.Splines
         protected MeshRenderer meshRenderer;
         protected AnimationCurve previousWidthOverSpline, previousHeightOverSpline;
 
+#if UNITY_EDITOR
+        private bool editorDelay;
+#endif
+        
+
         private void Awake()
         {
             SetupMesh();
@@ -111,7 +116,7 @@ namespace Hadi.Splines
         /// </summary>
         protected virtual void GenerateMesh()
         {
-            int numPoints = splineData.Points.Count * currentMeshResolution;
+            int numPoints = splineData.SegmentedPoints.Count * currentMeshResolution;
             GenerateVertices(numPoints);
             GenerateTriangles(GetTriangleCount(numPoints));
             GenerateUVs();
@@ -210,11 +215,25 @@ namespace Hadi.Splines
 
             }
 #if UNITY_EDITOR
-            UnityEditor.EditorApplication.delayCall += () =>
+            if (!editorDelay)
             {
-                Clear();
-                GenerateMesh();
-            };
+                editorDelay = true;
+                UnityEditor.EditorApplication.delayCall += ClearAndRegenerate;
+            }
+#endif
+        }
+
+        private void ClearAndRegenerate()
+        {
+            Clear();
+            GenerateMesh();
+        }
+
+        private void OnDestroy()
+        {
+#if UNITY_EDITOR
+            if(editorDelay)
+                UnityEditor.EditorApplication.delayCall -=  ClearAndRegenerate;
 #endif
         }
 
@@ -231,8 +250,10 @@ namespace Hadi.Splines
             for (int i = 0; i < vertices.Length; i++)
             {
                 Gizmos.DrawSphere(transform.TransformSplinePoint(vertices[i], splineData.useObjectTransform), 0.01f);
+#if UNITY_EDITOR
                 if (drawVertexIndices)
                     Handles.Label(transform.TransformSplinePoint(vertices[i], splineData.useObjectTransform) + Vector3.right * 0.05f, i + "", style);
+#endif
             }
 
             Gizmos.color = Color.black;

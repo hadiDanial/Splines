@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ce042377ed871cd468bf4e0aba9f9372, type: 3}
-  m_Name: Line Renderer Settings
+  m_Name: Thick Line
   m_EditorClassIdentifier: 
   material: {fileID: 10306, guid: 0000000000000000f000000000000000, type: 0}
   uVGenerationType: 0
   useWidthCurve: 0
-  startWidth: 0.009
-  endWidth: 0.407
+  startWidth: 2
+  endWidth: 2
   widthCurve:
     serializedVersion: 2
     m_Curve:
@@ -41,6 +41,6 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  startColor: {r: 0.6050001, g: 0.12941174, b: 0.8980392, a: 1}
-  endColor: {r: 0.2962624, g: 1, b: 0.2028302, a: 1}
+  startColor: {r: 0, g: 0, b: 0, a: 1}
+  endColor: {r: 0, g: 0, b: 0, a: 1}
   lineAlignment: 0

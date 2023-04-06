@@ -7,7 +7,9 @@ namespace Hadi.Splines
 {
     public class SplineSettingsEditorUtility
     {
+#if UNITY_EDITOR
         [MenuItem("Splines/Refresh Splines")]
+#endif
         public static void RefreshSplines()
         {
             Spline[] splines = GameObject.FindObjectsOfType<Spline>();

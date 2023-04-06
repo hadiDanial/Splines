@@ -34,7 +34,7 @@ namespace Hadi.Splines
             this.splineData = splineData;
             settings = (SplineLineRendererSettings)splineData.settings;
             lineRenderer.material = splineData.settings?.Material;
-            int count = splineData.Points.Count;
+            int count = splineData.SegmentedPoints.Count;
             
             if (settings.useWidthCurve)
             {
@@ -51,9 +51,9 @@ namespace Hadi.Splines
             lineRenderer.alignment = settings.LineAlignment;
 
             lineRenderer.positionCount = count;
-            for (int i = 0; i < splineData.Points.Count; i++)
+            for (int i = 0; i < splineData.SegmentedPoints.Count; i++)
             {
-                lineRenderer.SetPosition(i, splineData.Points[i]);
+                lineRenderer.SetPosition(i, splineData.SegmentedPoints[i]);
             }
         }
         public void SetClosedSpline(bool closed)
@@ -68,7 +68,9 @@ namespace Hadi.Splines
 
         public void Clear()
         {
-            this.lineRenderer.positionCount = 0;
+            if(lineRenderer == null) 
+                InitializeLineRenderer();
+            lineRenderer.positionCount = 0;
         }
 
         public void Destroy()
