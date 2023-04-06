@@ -3,11 +3,12 @@ using UnityEngine;
 
 namespace Hadi.Splines
 {
-    [System.Serializable]
+    [Serializable]
     public class Point
     {
         public Vector3 anchor;
         public Quaternion rotation = Quaternion.identity;
+        public Vector3 scale = Vector3.one;
         public Vector3 relativeControlPoint1, relativeControlPoint2;
         public ControlMode mode;
 
@@ -110,10 +111,11 @@ namespace Hadi.Splines
             relativeControlPoint2 = -relativeControlPoint1;
         }
 
-        public void UpdateAnchor(Vector3 anchor, Quaternion rotation)
+        public void UpdateAnchor(Vector3 anchor, Quaternion rotation, Vector3 scale)
         {
             this.anchor = anchor;
             this.rotation = rotation;
+            this.scale = scale;
         }
 
         public void UpdateControlPoints(Vector3 control1, Vector3 control2)
@@ -129,5 +131,10 @@ namespace Hadi.Splines
 
         public Vector3 GetControlPoint1() => anchor + relativeControlPoint1;
         public Vector3 GetControlPoint2() => anchor + relativeControlPoint2;
+
+        public void SetAutoRotation()
+        {
+            rotation = Quaternion.LookRotation(relativeControlPoint1.normalized);
+        }
     }
 }

@@ -10,8 +10,8 @@ namespace Hadi.Splines
         public static Vector3 LerpPosition(SplineData SplineData, SplineSegment segment, bool looped = false)
         {
             if (looped)
-                return Vector3.Lerp(SplineData.Points[SplineData.Points.Count - 1], SplineData.Points[0], segment.tBetweenPoints);
-            return Vector3.Lerp(SplineData.Points[segment.pointIndex], SplineData.Points[segment.pointIndex + 1], segment.tBetweenPoints);
+                return Vector3.Lerp(SplineData.SegmentedPoints[SplineData.SegmentedPoints.Count - 1], SplineData.SegmentedPoints[0], segment.tBetweenPoints);
+            return Vector3.Lerp(SplineData.SegmentedPoints[segment.pointIndex], SplineData.SegmentedPoints[segment.pointIndex + 1], segment.tBetweenPoints);
         }
 
         public static Vector3 LerpNormal(SplineData SplineData, SplineSegment segment, bool looped = false)
