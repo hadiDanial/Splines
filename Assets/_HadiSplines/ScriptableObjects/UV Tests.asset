@@ -10,8 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 747eccf25c1108d459c775b6349fc7f4, type: 3}
-  m_Name: Green
+  m_Name: UV Tests
   m_EditorClassIdentifier: 
   material: {fileID: 2100000, guid: 3115d0bc19374bb40bcc9e44d52969de, type: 2}
   uVGenerationType: 1
-  radius: 0.15
+  radius: 0.2
