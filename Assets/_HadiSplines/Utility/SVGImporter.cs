@@ -7,6 +7,7 @@ using Vector2 = UnityEngine.Vector2;
 using Rect = SVGImporter.Elements.Rect;
 using SVGImporter.Elements.PathUtility;
 using SVGImporter.Elements.Transforms;
+using UnityEditor;
 using static SVGImporter.Elements.PathUtility.SimpleMoveCommand;
 
 namespace Hadi.Splines
@@ -17,17 +18,16 @@ namespace Hadi.Splines
         private float svgToSplineScale = 0.01f;
         [SerializeField, Multiline(40)] private string svgCode;
         [SerializeField] private RendererSettings defaultRendererSettings;
-        private Element element;
+        private Element importedElement;
         private TagType type;
         private Spline spline;
         private List<Point> points;
-        private bool useObjectTransform = false;
 
         public string SvgCode { get => svgCode; set => svgCode = value; }
 
         internal void SetElement(Element element)
         {
-            this.element = element;
+            this.importedElement = element;
             if (element == null) return;
             SetGameObjectName(element);
             
@@ -36,19 +36,20 @@ namespace Hadi.Splines
 
         private void SetGameObjectName(Element element)
         {
-            string name = element.ElementId;
-            if (string.IsNullOrEmpty(name)) name = element.ElementName;
-            gameObject.name = name;
+            string objectName = element.ElementId;
+            if (string.IsNullOrEmpty(objectName)) objectName = element.ElementName;
+            gameObject.name = objectName;
         }
 
         private void Import()
         {
-            if (Element.IsContainer(element.GetTagType()))
+            if (Element.IsContainer(importedElement.GetTagType()))
             {
                 Transform parentTransform = transform;
                 if (transform.childCount > 0)
                 {
-                    parentTransform = (new GameObject(element.ElementName)).transform;
+                    parentTransform = (new GameObject(importedElement.ElementName)).transform;
+                    Undo.RegisterCreatedObjectUndo(parentTransform.gameObject, "Import SVG into new GameObject");
                     parentTransform.SetParent(transform.parent);
                 }
                 else
@@ -58,9 +59,9 @@ namespace Hadi.Splines
                     transform.localScale = Vector3.one;
                 }
 
-                element.Transform.ApplyTo(parentTransform);
+                importedElement.Transform.ApplyTo(parentTransform, svgToSplineScale);
 
-                ParentElement parent = (ParentElement)element;
+                ParentElement parent = (ParentElement)importedElement;
                 foreach (var item in parent.Children)
                 {
                     GameObject child = new GameObject(item.ElementName);
@@ -73,36 +74,36 @@ namespace Hadi.Splines
             }
             else
             {
-                type = element.GetTagType();
+                type = importedElement.GetTagType();
                 spline = gameObject.AddComponent<Spline>();
                 transform.localPosition = Vector3.zero;
                 spline.SplineData = new SplineData();
-                spline.UseObjectTransform = useObjectTransform;
+                spline.UseObjectTransform = true;
                 spline.RendererSettings = defaultRendererSettings;
                 spline.SplineData.settings = defaultRendererSettings;
                 points = new List<Point>();
                 switch (type)
                 {
                     case TagType.Circle:
-                        GenerateCircleSpline((Circle)element);
+                        GenerateCircleSpline((Circle)importedElement);
                         break;
                     case TagType.Ellipse:
-                        GenerateEllipseSpline((Ellipse)element);
+                        GenerateEllipseSpline((Ellipse)importedElement);
                         break;
                     case TagType.Line:
-                        GenerateLine((Line)element);
+                        GenerateLine((Line)importedElement);
                         break;
                     case TagType.Path:
-                        GeneratePath((Path)element);
+                        GeneratePath((Path)importedElement);
                         break;
                     case TagType.Polygon:
-                        GeneratePolygon((Polygon)element);
+                        GeneratePolygon((Polygon)importedElement);
                         break;
                     case TagType.Polyline:
-                        GeneratePolyline((Polyline)element);
+                        GeneratePolyline((Polyline)importedElement);
                         break;
                     case TagType.Rect:
-                        GenerateRect((Rect)element);
+                        GenerateRect((Rect)importedElement);
                         break;
                     default:
                         Debug.Log($"Incorrect type {type}");
@@ -110,31 +111,33 @@ namespace Hadi.Splines
                 }
 
 
-                foreach (TransformOperation operation in element.Transform.Operations)
+                ApplyTransformations();
+
+                spline.SetByElement(importedElement, points, defaultRendererSettings);
+#if UNITY_EDITOR
+                EditorApplication.delayCall += () => DestroyImmediate(this);
+#endif
+            }
+        }
+
+        private void ApplyTransformations()
+        {
+            foreach (TransformOperation operation in importedElement.Transform.Operations)
+            {
+                if (operation.IsAppliedToTransform())
                 {
-                    if (operation.IsAppliedToTransform())
+                    operation.ApplyTo(transform, svgToSplineScale);
+                }
+                else
+                {
+                    foreach (Point point in points)
                     {
-                        useObjectTransform = true;
-                        operation.ApplyTo(transform, svgToSplineScale);
-                    }
-                    else
-                    {
-                        foreach (Point point in points)
-                        {
-                            point.anchor = element.Transform.ApplyTo(point.anchor) * svgToSplineScale;
-                            point.relativeControlPoint1 = element.Transform.ApplyTo(point.relativeControlPoint1) *
-                                                          svgToSplineScale;
-                            point.relativeControlPoint2 = element.Transform.ApplyTo(point.relativeControlPoint2) *
-                                                          svgToSplineScale;
-                            point.Refresh(SplineMode.XY);
-                        }
+                        point.anchor = importedElement.Transform.ApplyTo(point.anchor * svgToSplineScale);
+                        point.relativeControlPoint1 = importedElement.Transform.ApplyTo(point.relativeControlPoint1 * svgToSplineScale);
+                        point.relativeControlPoint2 = importedElement.Transform.ApplyTo(point.relativeControlPoint2 * svgToSplineScale);
+                        point.Refresh(SplineMode.XY);
                     }
                 }
-
-                spline.SetByElement(element, points, defaultRendererSettings);
-#if UNITY_EDITOR
-                UnityEditor.EditorApplication.delayCall += () => DestroyImmediate(this);
-#endif
             }
         }
 
@@ -143,45 +146,45 @@ namespace Hadi.Splines
             List<List<Point>> listOfPointLists = new List<List<Point>>();
             List<Point> currentPointList = new List<Point>();
             Vector2 currentPosition = Vector2.zero;
-            Vector2 tempPos = Vector2.zero;
+            Vector2 tempPos;
             foreach (var command in element.PathCommands)
             {
                 switch (command)
                 {
-                    case ClosePathCommand closePath:
+                    case ClosePathCommand:
                         spline.IsClosedSpline = true; 
                         break;
-                    case MoveCommand moveCommad:
+                    case MoveCommand moveCommand:
                         currentPointList = new List<Point>();
                         listOfPointLists.Add(currentPointList);
-                        tempPos = MyVector2ToVector2(moveCommad.Point);
-                        currentPosition = UpdateCurrentPosition(currentPosition, moveCommad.IsAbsolute, tempPos);
+                        tempPos = MyVector2ToVector2(moveCommand.Point);
+                        currentPosition = UpdateCurrentPosition(currentPosition, moveCommand.IsAbsolute, tempPos) * svgToSplineScale;
                         currentPointList.Add(new Point(currentPosition, Vector2.zero));
                         break;
                     case LineCommand lineCommand:
                         tempPos = MyVector2ToVector2(lineCommand.Point);
-                        currentPosition = UpdateCurrentPosition(currentPosition, lineCommand.IsAbsolute, tempPos);
+                        currentPosition = UpdateCurrentPosition(currentPosition, lineCommand.IsAbsolute, tempPos) * svgToSplineScale;
                         currentPointList.Add(new Point(currentPosition, Vector2.zero));
                         break;
-                    case SimpleMoveCommand simpleMoveCommad:
-                        tempPos = simpleMoveCommad.MovementType == SimpleMoveType.Horizontal ? new Vector2(simpleMoveCommad.Value, 0) : new Vector2(0, -simpleMoveCommad.Value);
-                        currentPosition = UpdateCurrentPosition(currentPosition, simpleMoveCommad.IsAbsolute, tempPos); 
+                    case SimpleMoveCommand simpleMoveCommand:
+                        tempPos = simpleMoveCommand.MovementType == SimpleMoveType.Horizontal ? new Vector2(simpleMoveCommand.Value, 0) : new Vector2(0, -simpleMoveCommand.Value);
+                        currentPosition = UpdateCurrentPosition(currentPosition, simpleMoveCommand.IsAbsolute, tempPos) * svgToSplineScale; 
                         currentPointList.Add((new Point(currentPosition, Vector2.zero)));
                         break;
                     case ArcCommand arcCommand:
                         break;
                     case CubicCurveCommand ccCommand:
-                        Vector2 cp1 = MyVector2ToVector2(ccCommand.ControlPoint1);
-                        Vector2 cp2 = MyVector2ToVector2(ccCommand.ControlPoint2);
-                        Vector2 position2 = MyVector2ToVector2(ccCommand.Point2);
+                        Vector2 cp1 = MyVector2ToVector2(ccCommand.ControlPoint1) * svgToSplineScale;
+                        Vector2 cp2 = MyVector2ToVector2(ccCommand.ControlPoint2) * svgToSplineScale;
+                        Vector2 position2 = MyVector2ToVector2(ccCommand.Point2) * svgToSplineScale;
                         Point point1 = currentPointList[currentPointList.Count - 1];
                         point1.relativeControlPoint2 = cp1 - (Vector2)point1.anchor;
                         //currentPointList.Add(new Point(currentPosition, cp1));
-                        currentPosition = UpdateCurrentPosition(currentPosition, ccCommand.IsAbsolute, position2);
+                        currentPosition = UpdateCurrentPosition(currentPosition, ccCommand.IsAbsolute, position2) * svgToSplineScale;
                         currentPointList.Add(new Point(currentPosition, cp2 - currentPosition));
                         break;
                     case CubicCurveContinueCommand ccContinueCommand:
-                        currentPosition = UpdateCurrentPosition(currentPosition, ccContinueCommand.IsAbsolute, MyVector2ToVector2(ccContinueCommand.Point2));
+                        currentPosition = UpdateCurrentPosition(currentPosition, ccContinueCommand.IsAbsolute, MyVector2ToVector2(ccContinueCommand.Point2)) * svgToSplineScale;
                         currentPointList.Add(new Point(currentPosition, MyVector2ToVector2(ccContinueCommand.ControlPoint2)));
                         break;
                     case QuadraticCurveCommand qcCommand:
@@ -204,13 +207,12 @@ namespace Hadi.Splines
         private void GenerateRect(Rect element)
         {
             //transform.localPosition = MyVector2ToVector2(element.Position) +Vector2.down * element.Size.y / 2 + Vector2.right * element.Position.x;
-            Vector2 size = MyVector2ToVector2(element.Size);
-            Vector2 position = MyVector2ToVector2(element.Position);
+            Vector2 size = MyVector2ToVector2(element.Size) * svgToSplineScale;
+            Vector2 position = MyVector2ToVector2(element.Position) * svgToSplineScale;
             transform.Translate(position, Space.Self);
             Vector2 origin = (position - Vector2.down * size.y / 2f + Vector2.right * size.x / 2f) - (Vector2)transform.localPosition;
-            points = SplineShapesUtility.Rect(size * svgToSplineScale, origin * svgToSplineScale);
+            points = SplineShapesUtility.Rect(size, origin);
             spline.IsClosedSpline = true;
-            spline.UseObjectTransform = true;
         }
 
         private void GeneratePolyline(Polyline element)
@@ -220,21 +222,23 @@ namespace Hadi.Splines
             {
                 linePoints.Add(MyVector2ToVector2(item) * svgToSplineScale);
             }
+            transform.Translate(linePoints[0], Space.Self);
+            linePoints[0] = Vector3.zero;
             points = SplineShapesUtility.Polyline(linePoints);
         }
 
         private void GenerateLine(Line element)
         {
-            MyVector2 center = element.Point1 + element.Point2;
-            center = center / 2;
             //transform.localPosition = MyVector2ToVector2(center);
-            points = SplineShapesUtility.Line(element.Point1.x * svgToSplineScale, element.Point1.y * svgToSplineScale, element.Point2.x * svgToSplineScale, element.Point2.y * svgToSplineScale);
+            Vector2 position = new Vector2(element.Point1.x, element.Point1.y) * svgToSplineScale;
+            transform.Translate(position, Space.Self);
+            points = SplineShapesUtility.Line(0, 0, element.Point2.x * svgToSplineScale, element.Point2.y * svgToSplineScale);
         }
 
         private void GenerateEllipseSpline(Ellipse element)
         {
             //transform.localPosition = MyVector2ToVector2(element.Center);
-            transform.Translate(MyVector2ToVector2(element.Center), Space.Self);
+            transform.Translate(MyVector2ToVector2(element.Center) * svgToSplineScale, Space.Self);
             points = SplineShapesUtility.Ellipse(element.Radius.x * svgToSplineScale, element.Radius.y * svgToSplineScale);
             spline.IsClosedSpline = true;
             spline.UseObjectTransform = true;
@@ -243,10 +247,9 @@ namespace Hadi.Splines
         private void GenerateCircleSpline(Circle element)
         {
             //transform.localPosition = MyVector2ToVector2(element.Center);
-            transform.Translate(MyVector2ToVector2(element.Center), Space.Self);
+            transform.Translate(MyVector2ToVector2(element.Center) * svgToSplineScale, Space.Self);
             points = SplineShapesUtility.Circle(element.Radius * svgToSplineScale);
             spline.IsClosedSpline = true;
-            spline.UseObjectTransform = true;
         }
         
         
