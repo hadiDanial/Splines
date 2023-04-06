@@ -218,12 +218,14 @@ namespace Hadi.Splines
         private void GeneratePolyline(Polyline element)
         {
             List<Vector2> linePoints = new List<Vector2>();
-            foreach (var item in element.Points)
+            var elementPoints = element.Points;
+            Vector2 origin = MyVector2ToVector2(elementPoints[0]) * svgToSplineScale;
+            transform.Translate(origin, Space.Self);
+            linePoints.Add(Vector2.zero);
+            for (int i = 1; i < elementPoints.Count; i++)
             {
-                linePoints.Add(MyVector2ToVector2(item) * svgToSplineScale);
+                linePoints.Add(MyVector2ToVector2(elementPoints[i]) * svgToSplineScale - origin);
             }
-            transform.Translate(linePoints[0], Space.Self);
-            linePoints[0] = Vector3.zero;
             points = SplineShapesUtility.Polyline(linePoints);
         }
 
