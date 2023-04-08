@@ -88,6 +88,7 @@ namespace Hadi.Splines
             segmentedPoints.Clear();
             tangents.Clear();
             normals.Clear();
+            scales.Clear();
             cumulativeLengthAtPoint.Clear();
             splineLength = 0;
             numPoints = 0;
