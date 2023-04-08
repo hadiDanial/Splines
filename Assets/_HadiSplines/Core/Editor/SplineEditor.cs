@@ -176,6 +176,8 @@ namespace Hadi.Splines.Editor
                         break;
                     case Tool.Scale:
                         scale = Handles.ScaleHandle(point.scale, handlePos, handleRotation);
+                        scale = new Vector3(Mathf.Clamp(scale.x, 0.001f, scale.x),
+                            Mathf.Clamp(scale.y, 0.001f, scale.y), Mathf.Clamp(scale.z, 0.001f, scale.z));
                         break;                 
                     case Tool.Move:
                     default:
