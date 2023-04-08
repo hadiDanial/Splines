@@ -163,6 +163,9 @@ namespace Hadi.Splines.Editor
                 EditorGUI.BeginChangeCheck();
                 Point point = points[pickedHandle.Value];
                 Vector3 handlePos = spline.transform.TransformSplinePoint(point.anchor, spline.UseObjectTransform);
+                rotation = point.rotation;
+                scale = point.scale;
+                anchor = handlePos;
                 switch (Tools.current)
                 {                        
                     case Tool.Rotate:
