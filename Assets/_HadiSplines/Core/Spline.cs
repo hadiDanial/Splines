@@ -268,6 +268,7 @@ namespace Hadi.Splines
             else 
                 P = Quaternion.Slerp(P1.rotation, P2.rotation, 0.5f) * Vector3.up;
             SplineData.Normals.Add(P.normalized);
+            SplineData.Scale.Add(Vector3.Slerp(P1.scale, P2.scale, t));
         }
 
         /// <summary>
