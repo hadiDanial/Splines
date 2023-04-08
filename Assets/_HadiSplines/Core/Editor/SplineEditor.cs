@@ -50,6 +50,8 @@ namespace Hadi.Splines.Editor
                 Reset();
                 spline.AddPoint();
             }
+            EditorGUILayout.BeginHorizontal();
+            spline.ShapeOnReset = (SplineShapes)EditorGUILayout.EnumPopup(spline.ShapeOnReset, options);
             if (GUILayout.Button("Reset Spline"))
             {
                 if (EditorUtility.DisplayDialog("Reset Spline", "Are you sure you want to the spline?", "Yes", "Cancel"))
@@ -59,6 +61,7 @@ namespace Hadi.Splines.Editor
                     spline.ResetSpline();
                 }
             }
+            EditorGUILayout.EndHorizontal();
             if (GUILayout.Button("Reset Point Rotations"))
             {
                 if (EditorUtility.DisplayDialog("Reset Point Rotations", "Are you sure you want to reset all point rotations?", "Yes", "Cancel"))
