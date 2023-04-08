@@ -14,9 +14,12 @@ namespace Hadi.Splines
         [SerializeField] private List<Vector3> tangents;
         [SerializeField] private List<Vector3> scales;
         [SerializeField] private List<float> cumulativeLengthAtPoint;
+        
         private float splineLength;
         public Transform objectTransform;
         public bool useObjectTransform;
+        
+        private Spline spline;
         public RendererSettings settings;
 
         /// <summary>
@@ -53,10 +56,14 @@ namespace Hadi.Splines
         /// The total length along the spline up to each segmented point (starts at zero and goes up to `Length`.
         /// </summary>
         public List<float> CumulativeLengthAtPoint { get => cumulativeLengthAtPoint; private set => cumulativeLengthAtPoint = value; }
+        public int NumPoints { get => Spline.GetPoints().Count; }
+        public bool UseObjectTransform { get => Spline.UseObjectTransform; }
+        public Transform ObjectTransform { get => Spline.transform; }
+        public Spline Spline { get => spline;
+            set => spline = value;
+        }
 
-        public int numPoints;
-
-        public SplineData()
+        public SplineData(Spline spline)
         {
             points = new List<Point>();
             segmentedPoints = new List<Vector3>();
@@ -64,6 +71,7 @@ namespace Hadi.Splines
             tangents = new List<Vector3>();
             scales = new List<Vector3>();
             cumulativeLengthAtPoint = new List<float>();
+            this.spline = spline;
         }
 
         /// <summary>
@@ -91,7 +99,6 @@ namespace Hadi.Splines
             scales.Clear();
             cumulativeLengthAtPoint.Clear();
             splineLength = 0;
-            numPoints = 0;
             settings = null;
         }
     }
