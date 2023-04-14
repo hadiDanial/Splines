@@ -23,16 +23,20 @@ namespace Hadi.Splines
         protected bool capSides = true;
 
         protected SplineData splineData;
-        [SerializeField]
-        protected int[] triangles;
+
         [SerializeField]
         protected Vector3[] vertices;
+        [SerializeField]
+        protected int[] triangles;
+        [SerializeField] 
+        protected Vector3[] normals;
         [SerializeField]
         protected Vector2[] uvs;
 
         [Header("DEBUG")]
         [SerializeField] private bool drawGizmos = true;
-        [SerializeField] private bool drawVertexIndices = false;
+        [SerializeField] private bool drawVertexIndices;
+        [SerializeField] private bool drawNormals;
         protected RendererSettings rendererSettings;
 
         protected bool isClosed;
@@ -87,6 +91,7 @@ namespace Hadi.Splines
             mesh.Clear();
             mesh.vertices = vertices;
             mesh.triangles = triangles;
+            mesh.normals = normals;
             mesh.uv = uvs;
             mesh.RecalculateNormals();
             mesh.RecalculateTangents();
@@ -116,12 +121,17 @@ namespace Hadi.Splines
         /// </summary>
         protected virtual void GenerateMesh()
         {
-            int numPoints = splineData.SegmentedPoints.Count * currentMeshResolution;
+            int numPoints = GetVertexCount();
             GenerateVertices(numPoints);
             GenerateTriangles(GetTriangleCount(numPoints));
             GenerateUVs();
 
             InitializeMesh();
+        }
+
+        protected virtual int GetVertexCount()
+        {
+            return splineData.SegmentedPoints.Count * currentMeshResolution;
         }
 
         /// <summary>
@@ -130,7 +140,8 @@ namespace Hadi.Splines
         /// <param name="numPoints">Number of vertices</param>
         protected virtual void GenerateVertices(int numPoints)
         {
-            vertices = new Vector3[numPoints];            
+            vertices = new Vector3[numPoints];
+            normals = new Vector3[numPoints];
         }
 
         /// <summary>
@@ -212,8 +223,9 @@ namespace Hadi.Splines
             if (currentMeshResolution != meshResolution)
             {
                 currentMeshResolution = meshResolution;
-
             }
+            if(splineData != null && splineData.Spline != null)
+                splineData.Spline.GenerateSpline();
 #if UNITY_EDITOR
             if (!editorDelay)
             {
@@ -226,6 +238,7 @@ namespace Hadi.Splines
         private void ClearAndRegenerate()
         {
             Clear();
+            
             GenerateMesh();
         }
 
@@ -236,7 +249,7 @@ namespace Hadi.Splines
                 UnityEditor.EditorApplication.delayCall -=  ClearAndRegenerate;
 #endif
         }
-
+#if UNITY_EDITOR
         private void OnDrawGizmos()
         {
             if (vertices == null || vertices.Length == 0) return;
@@ -249,11 +262,14 @@ namespace Hadi.Splines
 
             for (int i = 0; i < vertices.Length; i++)
             {
-                Gizmos.DrawSphere(transform.TransformSplinePoint(vertices[i], splineData.useObjectTransform), 0.01f);
-#if UNITY_EDITOR
+                Gizmos.color = Color.red;
+                Vector3 transformSplinePoint = transform.TransformSplinePoint(vertices[i], splineData.useObjectTransform);
+                Gizmos.DrawSphere(transformSplinePoint, 0.01f);
                 if (drawVertexIndices)
-                    Handles.Label(transform.TransformSplinePoint(vertices[i], splineData.useObjectTransform) + Vector3.right * 0.05f, i + "", style);
-#endif
+                    Handles.Label(transformSplinePoint + Vector3.one * 0.005f, i + "", style);
+                Gizmos.color = Color.white;
+                if(drawNormals)
+                    Gizmos.DrawLine(transformSplinePoint, transformSplinePoint + normals[i] * 0.1f);
             }
 
             Gizmos.color = Color.black;
@@ -261,15 +277,16 @@ namespace Hadi.Splines
             {
                 for (int i = 0; i < triangles.Length; i += 3)
                 {
-                    Gizmos.DrawLine(transform.TransformSplinePoint(vertices[triangles[i]], splineData.useObjectTransform),
-                                    transform.TransformSplinePoint(vertices[triangles[i + 1]], splineData.useObjectTransform));
-                    Gizmos.DrawLine(transform.TransformSplinePoint(vertices[triangles[i + 1]], splineData.useObjectTransform),
-                                    transform.TransformSplinePoint(vertices[triangles[i + 2]], splineData.useObjectTransform));
-                    Gizmos.DrawLine(transform.TransformSplinePoint(vertices[triangles[i]], splineData.useObjectTransform),
-                                    transform.TransformSplinePoint(vertices[triangles[i + 2]], splineData.useObjectTransform));
+                    Gizmos.DrawLine(transform.TransformSplinePoint(vertices[triangles[i]], splineData.UseObjectTransform),
+                                    transform.TransformSplinePoint(vertices[triangles[i + 1]], splineData.UseObjectTransform));
+                    Gizmos.DrawLine(transform.TransformSplinePoint(vertices[triangles[i + 1]], splineData.UseObjectTransform),
+                                    transform.TransformSplinePoint(vertices[triangles[i + 2]], splineData.UseObjectTransform));
+                    Gizmos.DrawLine(transform.TransformSplinePoint(vertices[triangles[i]], splineData.UseObjectTransform),
+                                    transform.TransformSplinePoint(vertices[triangles[i + 2]], splineData.UseObjectTransform));
                 }
             }
         }
-    }
+  #endif
+  }
 
 }

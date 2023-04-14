@@ -49,7 +49,9 @@ namespace Hadi.Splines
                 if (transform.childCount > 0)
                 {
                     parentTransform = (new GameObject(importedElement.ElementName)).transform;
-                    Undo.RegisterCreatedObjectUndo(parentTransform.gameObject, "Import SVG into new GameObject");
+#if UNITY_EDITOR
+                    Undo.RegisterCreatedObjectUndo(parentTransform.gameObject, "Import SVG into new GameObject");              
+#endif
                     parentTransform.SetParent(transform.parent);
                 }
                 else
@@ -77,7 +79,7 @@ namespace Hadi.Splines
                 type = importedElement.GetTagType();
                 spline = gameObject.AddComponent<Spline>();
                 transform.localPosition = Vector3.zero;
-                spline.SplineData = new SplineData();
+                spline.SplineData = new SplineData(spline);
                 spline.UseObjectTransform = true;
                 spline.RendererSettings = defaultRendererSettings;
                 spline.SplineData.settings = defaultRendererSettings;
