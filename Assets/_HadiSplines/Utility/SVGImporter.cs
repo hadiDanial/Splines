@@ -154,50 +154,76 @@ namespace Hadi.Splines
                 switch (command)
                 {
                     case ClosePathCommand:
+                    {
                         spline.IsClosedSpline = true; 
                         break;
+                    }
                     case MoveCommand moveCommand:
+                    {
                         currentPointList = new List<Point>();
                         listOfPointLists.Add(currentPointList);
                         tempPos = MyVector2ToVector2(moveCommand.Point);
                         currentPosition = UpdateCurrentPosition(currentPosition, moveCommand.IsAbsolute, tempPos) * svgToSplineScale;
                         currentPointList.Add(new Point(currentPosition, Vector2.zero));
                         break;
+                    }
                     case LineCommand lineCommand:
+                    {
                         tempPos = MyVector2ToVector2(lineCommand.Point);
                         currentPosition = UpdateCurrentPosition(currentPosition, lineCommand.IsAbsolute, tempPos) * svgToSplineScale;
                         currentPointList.Add(new Point(currentPosition, Vector2.zero));
                         break;
+                    }
                     case SimpleMoveCommand simpleMoveCommand:
+                    {
                         tempPos = simpleMoveCommand.MovementType == SimpleMoveType.Horizontal ? new Vector2(simpleMoveCommand.Value, 0) : new Vector2(0, -simpleMoveCommand.Value);
                         currentPosition = UpdateCurrentPosition(currentPosition, simpleMoveCommand.IsAbsolute, tempPos) * svgToSplineScale; 
                         currentPointList.Add((new Point(currentPosition, Vector2.zero)));
                         break;
+                    }
                     case ArcCommand arcCommand:
                         break;
                     case CubicCurveCommand ccCommand:
+                    {
                         Vector2 cp1 = MyVector2ToVector2(ccCommand.ControlPoint1) * svgToSplineScale;
                         Vector2 cp2 = MyVector2ToVector2(ccCommand.ControlPoint2) * svgToSplineScale;
                         Vector2 position2 = MyVector2ToVector2(ccCommand.Point2) * svgToSplineScale;
                         Point point1 = currentPointList[currentPointList.Count - 1];
                         point1.relativeControlPoint2 = cp1 - (Vector2)point1.anchor;
-                        //currentPointList.Add(new Point(currentPosition, cp1));
                         currentPosition = UpdateCurrentPosition(currentPosition, ccCommand.IsAbsolute, position2) * svgToSplineScale;
                         currentPointList.Add(new Point(currentPosition, cp2 - currentPosition));
                         break;
+                    }
                     case CubicCurveContinueCommand ccContinueCommand:
+                    {
                         currentPosition = UpdateCurrentPosition(currentPosition, ccContinueCommand.IsAbsolute, MyVector2ToVector2(ccContinueCommand.Point2)) * svgToSplineScale;
                         currentPointList.Add(new Point(currentPosition, MyVector2ToVector2(ccContinueCommand.ControlPoint2)));
                         break;
+                    }
                     case QuadraticCurveCommand qcCommand:
+                    {
+                        Vector2 cp = MyVector2ToVector2(qcCommand.ControlPoint) * svgToSplineScale;
+                        Vector2 position2 = MyVector2ToVector2(qcCommand.Point2) * svgToSplineScale;
+                        Point point1 = currentPointList[currentPointList.Count - 1];
+                        point1.relativeControlPoint2 = cp - (Vector2)point1.anchor;
+                        currentPosition = UpdateCurrentPosition(currentPosition, qcCommand.IsAbsolute, position2);
+                        currentPointList.Add(new Point(currentPosition, cp - currentPosition));
                         break;
+                    }
                     case QuadraticCurveContinueCommand qcContinueCommand:
+                    {
+                        currentPosition = UpdateCurrentPosition(currentPosition, qcContinueCommand.IsAbsolute, MyVector2ToVector2(qcContinueCommand.Point2)) * svgToSplineScale;
+                        Point currentPoint = currentPointList[currentPointList.Count - 1];
+                        Vector2 cpGlobalPos = currentPoint.relativeControlPoint2 + currentPoint.anchor;
+                        currentPointList.Add(new Point(currentPosition, cpGlobalPos - currentPosition));
                         break;
+                    }
                     default:
                         break;
                 }
             }
             points = currentPointList;
+            spline.SegmentsPerCurve = 25;
         }
 
         private void GeneratePolygon(Polygon element)
@@ -229,14 +255,16 @@ namespace Hadi.Splines
                 linePoints.Add(MyVector2ToVector2(elementPoints[i]) * svgToSplineScale - origin);
             }
             points = SplineShapesUtility.Polyline(linePoints);
+            spline.SegmentsPerCurve = 2;
         }
 
         private void GenerateLine(Line element)
         {
             //transform.localPosition = MyVector2ToVector2(center);
-            Vector2 position = new Vector2(element.Point1.x, element.Point1.y) * svgToSplineScale;
+            Vector2 position = new Vector2(element.Point1.x, -element.Point1.y) * svgToSplineScale;
             transform.Translate(position, Space.Self);
-            points = SplineShapesUtility.Line(0, 0, element.Point2.x * svgToSplineScale, element.Point2.y * svgToSplineScale);
+            points = SplineShapesUtility.Line(0, 0, element.Point2.x * svgToSplineScale - position.x, -element.Point2.y * svgToSplineScale - position.y);
+            spline.SegmentsPerCurve = 2;
         }
 
         private void GenerateEllipseSpline(Ellipse element)
