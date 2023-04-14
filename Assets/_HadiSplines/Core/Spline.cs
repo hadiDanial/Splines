@@ -28,8 +28,9 @@ namespace Hadi.Splines
         private bool resetSplineOnPlay = false;
         [SerializeField, Tooltip("Should the transform be reset when the spline is reset?")] 
         private bool resetTransformOnSplineReset = true;
-        [SerializeField]
+        [SerializeField, HideInInspector]
         private SplineShapes shapeOnReset = SplineShapes.DefaultShape;
+        
         [SerializeField]
         private SplineData splineData;
 
@@ -52,12 +53,15 @@ namespace Hadi.Splines
         public SplineRendererType RendererType { get => rendererType; }
         public SplineSettings SplineSettings { get => splineSettings; set => splineSettings = value; }
         public RendererSettings RendererSettings { get => rendererSettings; set => rendererSettings = value; }
+        public SplineShapes ShapeOnReset { get => shapeOnReset; set => shapeOnReset = value; }
+
+        public int SegmentsPerCurve { get => splineSettings.segmentsPerCurve; set => splineSettings.segmentsPerCurve = value; }
 
         private void Awake()
         {
             if(SplineData == null)
             {
-                SplineData = new SplineData();
+                SplineData = new SplineData(this);
             }
             if(splineSettings == null)
             {
@@ -65,6 +69,7 @@ namespace Hadi.Splines
             }
             SplineData.objectTransform = transform;
             SplineData.useObjectTransform = splineSettings.useObjectTransform;
+
             splineRenderer = GetComponent<ISplineRenderer>();
             rendererType = (splineRenderer == null) ? SplineRendererType.None : splineRenderer.GetRendererType();
         }
@@ -177,7 +182,6 @@ namespace Hadi.Splines
                 splineRenderer?.SetClosedSpline(false);
 
             SplineData.CalculateLength();
-            SplineData.numPoints = pointsCount;
             if(splineRenderer != null)
                 splineRenderer?.SetData(SplineData);
         }
@@ -211,7 +215,7 @@ namespace Hadi.Splines
         /// <param name="index">Index of the curve in the spline.</param>
         protected virtual void CalculateCurve(Point P1, Point P2, int index, bool isClosingCurve = false)
         {
-            int totalSegments = splineSettings.segmentsPerCurve;// * POINT_COUNT_PER_CURVE;
+            int totalSegments = SegmentsPerCurve;
 
             // By caching these, we reduce the amount of computations needed. Same result as DeCasteljau's, but more efficient.
             // See `The Continuity of Splines` by Freya Holmer, @6:10
@@ -227,7 +231,8 @@ namespace Hadi.Splines
             Vector3 factor2 = 3 * P1anchor - 6 * P1controlPoint2 + 3 *P2controlPoint1;
             Vector3 factor3 = -P1anchor + 3 * P1controlPoint2 - 3 * P2controlPoint1 + P2anchor;
 
-            int start = index * splineSettings.segmentsPerCurve, end = start + totalSegments;
+            int start = index * SegmentsPerCurve, end = start + totalSegments;
+
             for (int i = start; i < end; i++)
             {
                 float t = ((float)i % totalSegments) / (end - start);
@@ -268,6 +273,7 @@ namespace Hadi.Splines
             else 
                 P = Quaternion.Slerp(P1.rotation, P2.rotation, 0.5f) * Vector3.up;
             SplineData.Normals.Add(P.normalized);
+            SplineData.Scale.Add(Vector3.Slerp(P1.scale, P2.scale, t));
         }
 
         /// <summary>
@@ -470,9 +476,11 @@ namespace Hadi.Splines
         {
             if (SplineData == null)
             {
-                SplineData = new SplineData();
+                SplineData = new SplineData(this);
                 ResetSpline();
             }
+            if (SplineData.Spline == null)
+                SplineData.Spline = this;
             if (SplineData.Points.Count == 0) return;
             if (splineRenderer == null) splineRenderer = GetComponent<ISplineRenderer>();
             foreach (Point point in SplineData.Points)
@@ -520,8 +528,7 @@ namespace Hadi.Splines
             rendererSettings = defaultRendererSettings;
             currentSettings = rendererSettings;
             splineData.settings = rendererSettings;
-            
-                Refresh();
+            Refresh();
         }
     }
 }

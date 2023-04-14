@@ -50,6 +50,8 @@ namespace Hadi.Splines.Editor
                 Reset();
                 spline.AddPoint();
             }
+            EditorGUILayout.BeginHorizontal();
+            spline.ShapeOnReset = (SplineShapes)EditorGUILayout.EnumPopup(spline.ShapeOnReset, options);
             if (GUILayout.Button("Reset Spline"))
             {
                 if (EditorUtility.DisplayDialog("Reset Spline", "Are you sure you want to the spline?", "Yes", "Cancel"))
@@ -59,6 +61,7 @@ namespace Hadi.Splines.Editor
                     spline.ResetSpline();
                 }
             }
+            EditorGUILayout.EndHorizontal();
             if (GUILayout.Button("Reset Point Rotations"))
             {
                 if (EditorUtility.DisplayDialog("Reset Point Rotations", "Are you sure you want to reset all point rotations?", "Yes", "Cancel"))
@@ -163,6 +166,9 @@ namespace Hadi.Splines.Editor
                 EditorGUI.BeginChangeCheck();
                 Point point = points[pickedHandle.Value];
                 Vector3 handlePos = spline.transform.TransformSplinePoint(point.anchor, spline.UseObjectTransform);
+                rotation = point.rotation;
+                scale = point.scale;
+                anchor = handlePos;
                 switch (Tools.current)
                 {                        
                     case Tool.Rotate:
@@ -170,6 +176,8 @@ namespace Hadi.Splines.Editor
                         break;
                     case Tool.Scale:
                         scale = Handles.ScaleHandle(point.scale, handlePos, handleRotation);
+                        scale = new Vector3(Mathf.Clamp(scale.x, 0.001f, scale.x),
+                            Mathf.Clamp(scale.y, 0.001f, scale.y), Mathf.Clamp(scale.z, 0.001f, scale.z));
                         break;                 
                     case Tool.Move:
                     default:
