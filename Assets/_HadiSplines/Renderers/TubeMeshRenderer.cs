@@ -142,7 +142,7 @@ namespace Hadi.Splines
                     }
 
                     uvs[i * (currentMeshResolution + 1) + j] = new Vector2(horizontalT, verticalT);
-                    Debug.Log($"Index {i * (currentMeshResolution + 1) + j}: (i, j) = <{i}, {j}> | {uvs[i * (currentMeshResolution + 1) + j]}");
+                    //Debug.Log($"Index {i * (currentMeshResolution + 1) + j}: (i, j) = <{i}, {j}> | {uvs[i * (currentMeshResolution + 1) + j]}");
                 }
             }
         }
