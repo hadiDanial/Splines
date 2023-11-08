@@ -42,5 +42,26 @@ namespace Hadi.Splines
         {
             return useObjectTransform ? transform.InverseTransformPoint(point) : point;
         }
+        
+        /// <summary>
+        /// Calculates a position along a cubic bezier using DeCasteljau's method at percentage t (0-1).
+        /// </summary>
+        /// <param name="p0">Control Point of first anchor</param>
+        /// <param name="p1">Anchor 1</param>
+        /// <param name="p2">Control Point of second anchor</param>
+        /// <param name="p3">Anchor 2</param>
+        /// <param name="t">Percentage between 0 and 1</param>
+        /// <returns></returns>
+        public static Vector3 GetPosition_DeCasteljau(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
+        {
+            Vector3 a, b, c, d, e;
+            a = Vector3.Lerp(p0, p1, t);
+            b = Vector3.Lerp(p1, p2, t);
+            c = Vector3.Lerp(p2, p3, t);
+            d = Vector3.Lerp(a, b, t);
+            e = Vector3.Lerp(b, c, t);
+            return Vector3.Lerp(d, e, t);
+        }
+
     }
 }
