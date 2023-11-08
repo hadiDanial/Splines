@@ -136,5 +136,12 @@ namespace Hadi.Splines
         {
             rotation = Quaternion.LookRotation(relativeControlPoint1.normalized);
         }
+
+        public void Move(Vector3 movement)
+        {
+            anchor += movement;
+            relativeControlPoint1 += movement;
+            relativeControlPoint2 += movement;
+        }
     }
 }
