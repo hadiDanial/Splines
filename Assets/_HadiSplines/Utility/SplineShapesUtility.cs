@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using SVGImporter.Elements.Transforms;
 using UnityEngine;
 
 namespace Hadi.Splines
@@ -101,7 +102,63 @@ namespace Hadi.Splines
             return points;
         }
 
-     
+        public static List<Point> Arc(Point startPoint, Vector2 radius, Vector2 center, float startAngle,
+            float endAngle,
+            float rotationAngle, bool largeArc)
+        {
+            List<Point> points = new List<Point>();
+            float currentAngle = startAngle;
+            float angleDiff = Mathf.Abs(endAngle - startAngle);
+            int numSegments = Mathf.CeilToInt(angleDiff / 90f);
+            float angleStep = angleDiff / numSegments;
+            float endAngleAdjusted = largeArc && angleDiff > 180f ? startAngle + angleStep * 2f : endAngle;
+            for (int i = 0; i < numSegments; i++)
+            {
+                float currentStartAngle = startAngle + i * angleStep;
+                float currentEndAngle = Mathf.Min(startAngle + (i + 1) * angleStep, endAngleAdjusted);
+                Point p1 = new Point(CalculatePointOnEllipse(center, radius, currentAngle), Vector2.zero, 
+                    CalculateControlPoint(center, radius, currentAngle, currentStartAngle, currentEndAngle));
+                Point p2 = new Point(CalculatePointOnEllipse(center, radius, Mathf.Min(currentAngle + angleStep, currentEndAngle)),
+                    -CalculateControlPoint(center, radius, currentEndAngle , currentAngle, currentEndAngle),
+                    Vector2.zero);
+                points.Add(p1);
+                points.Add(p2);
+                
+                currentAngle += angleStep;
+            }
+
+            // Vector2 endPoint = CalculatePointOnEllipse(center, radius, endAngle);
+            // points.Add(new Point(endPoint,
+            //     endPoint + CalculateControlPoint(center, radius, endAngle, startAngle, endAngle)));
+            return points;
+        }
+        private static Vector2 CalculatePointOnEllipse(Vector2 center, Vector2 radius, float angle)
+        {
+            float deg2Rad = angle * Mathf.Deg2Rad;
+            float x = center.x + radius.x * Mathf.Cos(deg2Rad);
+            float y = center.y + radius.y * Mathf.Sin(deg2Rad);
+            return new Vector2(x, y);
+        }
+        private static Vector2 CalculateControlPoint(Vector2 center, Vector2 radius, float angle, float startAngle, float endAngle)
+        {
+            float angleDiff = Mathf.Deg2Rad * (endAngle - startAngle);
+            float halfAngle = angleDiff / 2f;
+            float quarterAngle = halfAngle / 2f;
+
+            // Calculate the angle bisector
+            float bisectorAngle = Mathf.Deg2Rad * (startAngle + halfAngle);
+
+            // Calculate the distance from the center to the intersection point of the angle bisector and the ellipse
+            Vector2 p1 = new Vector2(center.x + radius.x * Mathf.Cos(bisectorAngle), center.y + radius.y * Mathf.Sin(bisectorAngle));
+            float distance = Vector2.Distance(p1, center);
+
+            // Calculate the control point
+            float offset = 4f / 3f * (1f - Mathf.Cos(quarterAngle)) / Mathf.Sin(quarterAngle) * distance;
+            float deg2Rad = angle * Mathf.Deg2Rad;
+            float controlX = center.x + offset * Mathf.Sin(deg2Rad);
+            float controlY = center.y - offset * Mathf.Cos(deg2Rad);
+            return new Vector2(controlX, controlY);
+        }
         public static List<Point> Line(float x1, float y1, float x2, float y2)
         {
             List<Point> points = new List<Point>();
