@@ -182,7 +182,11 @@ namespace Hadi.Splines
                         break;
                     }
                     case ArcCommand arcCommand:
+                    {
+                        var endPoint = ComputeArc(arcCommand, currentPosition, currentPointList);
+                        currentPosition = UpdateCurrentPosition(currentPosition, arcCommand.IsAbsolute, endPoint) * svgToSplineScale;
                         break;
+                    }
                     case CubicCurveCommand ccCommand:
                     {
                         Vector2 cp1 = MyVector2ToVector2(ccCommand.ControlPoint1) * svgToSplineScale;
@@ -218,12 +222,69 @@ namespace Hadi.Splines
                         currentPointList.Add(new Point(currentPosition, cpGlobalPos - currentPosition));
                         break;
                     }
-                    default:
-                        break;
                 }
             }
             points = currentPointList;
             spline.SegmentsPerCurve = 25;
+        }
+
+        /// <summary>
+        /// Compute a bezier curve from an arc
+        /// </summary>
+        /// <param name="arcCommand"></param>
+        /// <param name="currentPosition"></param>
+        /// <param name="currentPointList"></param>
+        /// <see cref="https://www.w3.org/TR/SVG/implnote.html#ArcConversionEndpointToCenter"/>
+        /// <returns></returns>
+        private Vector2 ComputeArc(ArcCommand arcCommand, Vector2 currentPosition, List<Point> currentPointList)
+        {
+            Vector2 radius = new Vector2(arcCommand.Radius.x, arcCommand.Radius.y) * svgToSplineScale;
+            Vector2 endPoint = MyVector2ToVector2(arcCommand.EndPoint) * svgToSplineScale;
+            float radiusX = Mathf.Abs(radius.x), rxSq = radiusX * radiusX;
+            float radiusY = Mathf.Abs(radius.y), rySq = radiusY * radiusY;
+            float theta = arcCommand.Rotation * Mathf.Deg2Rad;
+            float cosTheta = Mathf.Cos(theta), sinTheta = Mathf.Sin(theta);
+            float dx = (currentPosition.x - endPoint.x) / 2f, dy = (currentPosition.y - endPoint.y) / 2f;
+            Vector2 v = new Vector2(cosTheta * dx + sinTheta * dy, -sinTheta * dx + cosTheta * dy);
+            float rxSqMulVxSq = v.x * v.x * rySq, rySqMulVxSq = v.y * v.y * rxSq;
+            
+            // Correction of out-of-range radii:
+            // If either of the radii is zero, treat the arc as a line:
+            if (radiusX == 0 || radiusY == 0)
+            {
+                currentPointList.Add(new Point(endPoint, Vector2.zero));
+                return endPoint;
+            }
+            // Ensure radii are large enough:
+            float radiusCorrectionValue = ((v.x * v.x) / rxSq) + ((v.y * v.y) / rySq);
+            if (radiusCorrectionValue > 1)
+            {
+                radiusCorrectionValue = Mathf.Sqrt(radiusCorrectionValue);
+                radiusX = radiusCorrectionValue * radiusX;
+                radiusY = radiusCorrectionValue * radiusY;
+                rxSq = radiusX * radiusX;
+                rySq = radiusY * radiusY;
+                rxSqMulVxSq = v.x * v.x * rySq;
+                rySqMulVxSq = v.y * v.y * rxSq;
+            }
+
+            float sqrt = Mathf.Sqrt(( rxSq * rySq - rxSqMulVxSq - rySqMulVxSq)/(rxSqMulVxSq + rySqMulVxSq));
+            Vector2 c = (arcCommand.Arc == arcCommand.Sweep ? -1f : 1f) * sqrt *
+                        new Vector2(radiusX * v.y / radiusY, -radiusY * v.x / radiusX);
+            Vector2 center = new Vector2(cosTheta * c.x - sinTheta * c.y, sinTheta * c.x + cosTheta * c.y) +
+                             new Vector2(currentPosition.x + endPoint.x, currentPosition.y + endPoint.y) / 2f;
+
+            float startAngle, endAngle, angleDelta;
+            Vector2 arcStartVector = new Vector2((v.x - c.x) / radiusX, (v.y - c.y) / radiusY);
+            startAngle = Vector2.Angle(Vector2.right, arcStartVector);
+            angleDelta = Vector2.Angle(arcStartVector, new Vector2((-v.x - c.x) / radiusX, (-v.y - c.y) / radiusY));
+            if (arcCommand.Sweep && angleDelta < 0) angleDelta += 360;
+            else if(!arcCommand.Sweep && angleDelta > 0) angleDelta -= 360;
+            // delta = end - start -> end = delta + start
+            endAngle = angleDelta + startAngle;
+            radius = new Vector2(radiusX, radiusY);
+            currentPointList.AddRange(SplineShapesUtility.Arc(currentPointList[^1], radius, center, startAngle, endAngle, arcCommand.Rotation, arcCommand.Arc));
+            return endPoint;
         }
 
         private void GeneratePolygon(Polygon element)
